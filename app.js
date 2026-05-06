@@ -5,8 +5,6 @@ import {
   deletePurchaseEntry,
   getIssueEntries,
   getPurchaseEntries,
-  logoutCurrentUser,
-  requireAuth,
   subscribeToIssueEntries,
   subscribeToPurchaseEntries,
   updateIssueEntry,
@@ -435,7 +433,12 @@ function App() {
 
     async function initPage() {
       try {
-        await sessionManager.requireAuth("login.html");
+        // First, ensure session is initialized and user is authenticated
+        const user = await sessionManager.requireAuth("login.html");
+        
+        if (!isActive) {
+          return;
+        }
 
         const loadEntries = new Promise((resolve) => {
           let settled = false;
@@ -452,7 +455,7 @@ function App() {
                 setEntries(loadedEntries);
               }
             })
-            .catch((error) => console.error("Initial Firestore fetch failed:", error));
+            .catch((error) => console.error("Initial purchase fetch failed:", error));
 
           stopEntriesSubscription = subscribeToPurchaseEntries(
             (updatedEntries) => {
@@ -491,7 +494,7 @@ function App() {
                 setIssues(loadedEntries);
               }
             })
-            .catch((error) => console.error("Initial issue Firestore fetch failed:", error));
+            .catch((error) => console.error("Initial issue fetch failed:", error));
 
           stopIssueEntriesSubscription = subscribeToIssueEntries(
             (updatedEntries) => {
@@ -525,7 +528,7 @@ function App() {
         }
       } catch (error) {
         console.error("Page init error:", error);
-        if (isActive && error.message !== "Auth required") {
+        if (isActive && error.message !== "Authentication required") {
           setPurchaseLoading(false);
           setPurchaseError(formatRequestError(error, "Authentication check failed."));
         }
