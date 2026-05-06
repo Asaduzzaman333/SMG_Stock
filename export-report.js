@@ -1,8 +1,5 @@
 import { getIssueEntries, getPurchaseEntries } from "./api-client.js";
 
-const EXPORT_FLAGS = ["Design Requirement", "Purchased", "Replace", "New", "Extra"];
-const EXPORT_RECEIVED_FLAGS = ["Purchased", "Replace", "New", "Extra"];
-
 function toExportQuantity(value) {
   const quantity = Number(value);
   return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
@@ -21,7 +18,7 @@ function ensureGroup(groups, entry) {
       brand: entry.brand || "-",
       model: entry.model || "-",
       item: entry.item || "-",
-      flags: Object.fromEntries(EXPORT_FLAGS.map((flag) => [flag, 0])),
+      total: 0,
       issued: 0,
     });
   }
@@ -40,12 +37,7 @@ function buildStockSummarySheet(entries, issues, filters = {}) {
   const groups = new Map();
 
   entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
-    const group = ensureGroup(groups, entry);
-    const flag = entry.flag || "-";
-
-    if (group.flags[flag] !== undefined) {
-      group.flags[flag] += toExportQuantity(entry.quantity);
-    }
+    ensureGroup(groups, entry).total += toExportQuantity(entry.quantity);
   });
 
   issues.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
@@ -60,23 +52,11 @@ function buildStockSummarySheet(entries, issues, filters = {}) {
         a.model.localeCompare(b.model) ||
         a.item.localeCompare(b.item),
     )
-    .map((group) => {
-      const received = EXPORT_RECEIVED_FLAGS.reduce((sum, flag) => sum + group.flags[flag], 0);
-
-      return [
-        group.itemType,
-        group.brand,
-        group.model,
-        group.item,
-        ...EXPORT_FLAGS.map((flag) => group.flags[flag] || ""),
-        group.issued || "",
-        received - group.issued,
-      ];
-    });
+    .map((group) => [group.itemType, group.brand, group.model, group.item, group.total || "", group.issued || "", group.total - group.issued]);
 
   return {
     rows: [
-      ["Item Type", "Brand", "Model", "Item", ...EXPORT_FLAGS, "Issued", "Stock"],
+      ["Item Type", "Brand", "Model", "Item", "Purchases", "Issued", "Stock"],
       ...rows,
     ],
   };
@@ -87,16 +67,7 @@ function buildPurchaseSummarySheet(entries, filters = {}) {
 
   entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
     const group = ensureGroup(groups, entry);
-    const flag = entry.flag || "-";
-    const quantity = toExportQuantity(entry.quantity);
-
-    if (group.flags[flag] !== undefined) {
-      group.flags[flag] += quantity;
-    }
-
-    if (EXPORT_RECEIVED_FLAGS.includes(flag)) {
-      group.total = (group.total || 0) + quantity;
-    }
+    group.total += toExportQuantity(entry.quantity);
   });
 
   const rows = [...groups.values()]
@@ -107,18 +78,11 @@ function buildPurchaseSummarySheet(entries, filters = {}) {
         a.model.localeCompare(b.model) ||
         a.item.localeCompare(b.item),
     )
-    .map((group) => [
-      group.itemType,
-      group.brand,
-      group.model,
-      group.item,
-      ...EXPORT_FLAGS.map((flag) => group.flags[flag] || ""),
-      group.total || "",
-    ]);
+    .map((group) => [group.itemType, group.brand, group.model, group.item, group.total || ""]);
 
   return {
     rows: [
-      ["Item Type", "Brand", "Model", "Item", ...EXPORT_FLAGS, "Total Purchases"],
+      ["Item Type", "Brand", "Model", "Item", "Total Purchases"],
       ...rows,
     ],
   };
@@ -196,7 +160,6 @@ function buildPurchaseRows(entries) {
       "Rate",
       "Quantity",
       "Currency",
-      "Flag",
       "Via",
       "Storage Slot",
       "Remarks",
@@ -210,7 +173,6 @@ function buildPurchaseRows(entries) {
       Number(entry.rate) || "",
       toExportQuantity(entry.quantity),
       entry.currency || "",
-      entry.flag || "",
       entry.via || "",
       entry.storageSlot || "",
       entry.remarks || "",

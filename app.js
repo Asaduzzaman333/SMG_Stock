@@ -25,7 +25,6 @@ const purchaseInitial = {
   rate: "",
   quantity: "",
   currency: "BDT",
-  flag: "",
   via: "",
   storageSlot: "",
   remarks: "",
@@ -192,13 +191,6 @@ function PurchaseForm({
       h(
         "label",
         null,
-        h("span", null, "Flag"),
-        h("input", { name: "flag", type: "text", list: "flagOptions", placeholder: "Select or type flag", required: true, value: form.flag, onChange }),
-        h(DataList, { id: "flagOptions", values: ["Purchased", "Replace", "New", "Extra", "Design Requirement"] }),
-      ),
-      h(
-        "label",
-        null,
         h("span", null, "Via"),
         h("input", { name: "via", type: "text", list: "viaOptions", placeholder: "Select or type via", required: true, value: form.via, onChange }),
         h(DataList, { id: "viaOptions", values: ["Asian", "Direct", "MAMICO"] }),
@@ -274,11 +266,11 @@ function PurchaseTable({ entries, isLoading, error, onEdit, onDelete }) {
   let rows = null;
 
   if (error) {
-    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, error));
+    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 12 }, error));
   } else if (isLoading) {
-    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, "Loading entries..."));
+    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 12 }, "Loading entries..."));
   } else if (entries.length === 0) {
-    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, "No purchase entry added yet."));
+    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 12 }, "No purchase entry added yet."));
   } else {
     rows = entries.map((entry, index) =>
       h(
@@ -292,7 +284,6 @@ function PurchaseTable({ entries, isLoading, error, onEdit, onDelete }) {
         h("td", null, displayValue(entry.rate, "")),
         h("td", null, entry.quantity || 1),
         h("td", null, displayValue(entry.currency, "")),
-        h("td", null, h("span", { className: `badge ${entry.flag === "Replace" ? "warn" : "good"}` }, displayValue(entry.flag, ""))),
         h("td", null, displayValue(entry.via, "")),
         h("td", null, displayValue(entry.storageSlot)),
         h("td", null, displayValue(entry.remarks)),
@@ -326,7 +317,7 @@ function PurchaseTable({ entries, isLoading, error, onEdit, onDelete }) {
           h(
             "tr",
             null,
-            ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Flag", "Via", "Storage Slot", "Remarks", "Actions"].map((heading) =>
+            ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Via", "Storage Slot", "Remarks", "Actions"].map((heading) =>
               h("th", { key: heading }, heading),
             ),
           ),
@@ -649,7 +640,6 @@ function App() {
       rate: fieldValue(entry, "rate"),
       quantity: fieldValue(entry, "quantity", 1),
       currency: fieldValue(entry, "currency", "BDT"),
-      flag: fieldValue(entry, "flag"),
       via: fieldValue(entry, "via"),
       storageSlot: fieldValue(entry, "storageSlot"),
       remarks: fieldValue(entry, "remarks"),

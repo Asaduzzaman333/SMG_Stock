@@ -9,8 +9,6 @@ import { exportReport } from "./export-report.js";
 const { useEffect, useMemo, useState } = React;
 const h = React.createElement;
 
-const FLAGS = ["Design Requirement", "Purchased", "Replace", "New", "Extra"];
-const RECEIVED_FLAGS = ["Purchased", "Replace", "New", "Extra"];
 const VIEW_TITLES = {
   purchases: "Purchases Summery",
   issues: "Issues Summery",
@@ -86,7 +84,6 @@ function ensurePurchaseGroup(groups, entry) {
       brand: entry.brand || "-",
       model: entry.model || "-",
       item: entry.item || "-",
-      flags: Object.fromEntries(FLAGS.map((flag) => [flag, 0])),
       total: 0,
     });
   }
@@ -132,16 +129,7 @@ function buildPurchaseRows(entries, filters) {
 
   entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
     const group = ensurePurchaseGroup(groups, entry);
-    const flag = entry.flag || "-";
-    const quantity = toQuantity(entry.quantity);
-
-    if (group.flags[flag] !== undefined) {
-      group.flags[flag] += quantity;
-    }
-
-    if (RECEIVED_FLAGS.includes(flag)) {
-      group.total += quantity;
-    }
+    group.total += toQuantity(entry.quantity);
   });
 
   return sortBaseRows([...groups.values()]);
@@ -172,11 +160,7 @@ function buildStockRows(entries, issues, filters) {
 
   entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
     const group = ensurePurchaseGroup(groups, entry);
-    const flag = entry.flag || "-";
-
-    if (RECEIVED_FLAGS.includes(flag)) {
-      group.total += toQuantity(entry.quantity);
-    }
+    group.total += toQuantity(entry.quantity);
   });
 
   issues.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
@@ -211,7 +195,7 @@ function SummaryHead({ activeView }) {
       h(
         "tr",
         null,
-        ["Item Type", "Brand", "Model", "Item", ...FLAGS, "Total Purchases"].map((heading) => h("th", { key: heading }, heading)),
+        ["Item Type", "Brand", "Model", "Item", "Total Purchases"].map((heading) => h("th", { key: heading }, heading)),
       ),
     );
   }
@@ -243,16 +227,16 @@ function SummaryHead({ activeView }) {
 
 function SummaryRows({ activeView, rows, loadError, isLoading }) {
   if (loadError) {
-    return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 10 }, loadError)));
+    return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 9 }, loadError)));
   }
 
   if (isLoading) {
-    return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 10 }, "Loading summary data...")));
+    return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 9 }, "Loading summary data...")));
   }
 
   if (activeView === "purchases") {
     if (rows.length === 0) {
-      return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 10 }, "No purchase data found.")));
+      return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 5 }, "No purchase data found.")));
     }
 
     return h(
@@ -266,7 +250,6 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
           h("td", { className: "sticky-col brand-cell" }, row.brand),
           h("td", { className: "sticky-col model-cell" }, row.model),
           h("td", { className: "sticky-col item-cell" }, row.item),
-          ...FLAGS.map((flag) => h("td", { key: flag, className: "qty-cell" }, row.flags[flag] || "")),
           h("td", { className: "qty-cell" }, row.total || ""),
         ),
       ),
@@ -327,8 +310,8 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
 function exportRowsForView(activeView, rows) {
   if (activeView === "purchases") {
     return [
-      ["Item Type", "Brand", "Model", "Item", ...FLAGS, "Total Purchases"],
-      ...rows.map((row) => [row.itemType, row.brand, row.model, row.item, ...FLAGS.map((flag) => row.flags[flag] || ""), row.total || ""]),
+      ["Item Type", "Brand", "Model", "Item", "Total Purchases"],
+      ...rows.map((row) => [row.itemType, row.brand, row.model, row.item, row.total || ""]),
     ];
   }
 

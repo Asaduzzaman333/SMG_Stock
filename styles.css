@@ -1016,7 +1016,7 @@ table {
 }
 
 .pivot-table {
-  min-width: 1320px;
+  min-width: 980px;
   background: rgba(255, 255, 255, 0.8);
 }
 
@@ -1040,10 +1040,6 @@ table {
   font-size: 0.9rem;
   font-weight: 900;
   background: #eef4f2;
-}
-
-.pivot-table .flag-head {
-  min-width: 72px;
 }
 
 .pivot-table .item-type-cell,
@@ -1242,7 +1238,7 @@ td {
   }
 
   .pivot-table {
-    min-width: 1180px;
+    min-width: 920px;
   }
 }
 
@@ -1306,7 +1302,7 @@ td {
   }
 
   .pivot-table {
-    min-width: 1040px;
+    min-width: 860px;
   }
 
   th,
@@ -1366,7 +1362,7 @@ td {
   }
 
   .pivot-table {
-    min-width: 960px;
+    min-width: 820px;
   }
 
   .pivot-table th,
