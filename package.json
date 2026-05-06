@@ -4,17 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
+    "dev": "npx vercel dev",
     "check": "node --check app.js && node --check login.js && node --check summery.js && node --check api-client.js && node --check export-report.js && node --check api/auth.js && node --check api/purchase-entries.js && node --check api/issue-entries.js && node --check lib/auth.js && node --check lib/mongodb.js",
-    "start": "vercel dev"
+    "start": "npx vercel dev"
   },
   "dependencies": {
     "mongodb": "^6.20.0"
   },
-  "devDependencies": {
-    "vercel": "^48.8.2"
-  },
   "engines": {
-    "node": "22.x"
+    "node": ">=22 <25"
   }
 }
