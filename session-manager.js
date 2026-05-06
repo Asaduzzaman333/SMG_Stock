@@ -3,8 +3,8 @@ export class SessionManager {
   constructor() {
     this.sessionCheckInterval = null;
     this.sessionRefreshInterval = null;
-    this.sessionCheckTimeout = 30000; // Check every 30 seconds
-    this.sessionRefreshTimeout = 6 * 60 * 60 * 1000; // Refresh every 6 hours
+    this.sessionCheckTimeout = 15 * 60 * 1000; // Check every 15 minutes
+    this.sessionRefreshTimeout = 12 * 60 * 60 * 1000; // Refresh every 12 hours
     this.currentUser = null;
     this.isInitialized = false;
     this.storageKey = "smg_session_init";
@@ -151,7 +151,7 @@ export class SessionManager {
           await new Promise((resolve) => window.setTimeout(resolve, 1000));
           await this.verifySession();
         } catch {
-          // If still fails, user needs to re-login
+          // Stop background checks; the next protected request will decide whether to redirect.
           this.currentUser = null;
           this._stopSessionMonitoring();
         }

@@ -26,6 +26,9 @@ export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const session = getSession(req);
+      if (session) {
+        res.setHeader("Set-Cookie", createSessionCookie(session.email, req));
+      }
       res.status(session ? 200 : 401).json({ user: session ? { email: session.email } : null });
       return;
     }
@@ -45,13 +48,13 @@ export default async function handler(req, res) {
         return;
       }
 
-      res.setHeader("Set-Cookie", createSessionCookie(email));
+      res.setHeader("Set-Cookie", createSessionCookie(email, req));
       res.status(200).json({ user: { email } });
       return;
     }
 
     if (req.method === "DELETE") {
-      res.setHeader("Set-Cookie", clearSessionCookie());
+      res.setHeader("Set-Cookie", clearSessionCookie(req));
       res.status(200).json({ ok: true });
       return;
     }
@@ -65,7 +68,7 @@ export default async function handler(req, res) {
       }
 
       // Refresh the session cookie with a new expiration time
-      res.setHeader("Set-Cookie", createSessionCookie(session.email));
+      res.setHeader("Set-Cookie", createSessionCookie(session.email, req));
       res.status(200).json({ user: { email: session.email } });
       return;
     }
