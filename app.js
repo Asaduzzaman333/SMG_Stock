@@ -159,6 +159,25 @@ function distinctValues(rows, field) {
   return [...new Set(rows.map((row) => row[field]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
 
+function getAvailableQuantityForIssue(rows, form) {
+  if (!form.itemType || !form.brand || !form.model || !form.item) {
+    return 0;
+  }
+
+  const filteredByType = rows.filter((row) => valueMatchesSelection(row.itemType, form.itemType));
+  const filteredByBrand = filteredByType.filter((row) => valueMatchesSelection(row.brand, form.brand));
+  const filteredByModel = filteredByBrand.filter((row) => valueMatchesSelection(row.model, form.model));
+  const filteredByItem = filteredByModel.filter((row) => valueMatchesSelection(row.item, form.item));
+
+  if (form.fromBin) {
+    return filteredByItem
+      .filter((row) => valueMatchesSelection(row.fromBin, form.fromBin))
+      .reduce((sum, row) => sum + row.quantity, 0);
+  }
+
+  return filteredByItem.reduce((sum, row) => sum + row.quantity, 0);
+}
+
 function DataList({ id, values }) {
   return h(
     "datalist",
@@ -374,18 +393,6 @@ function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange
         }),
         h(DataList, { id: "issueItemOptions", values: stockOptions.items }),
       ),
-      h(TextInput, {
-        label: "Quantity",
-        name: "quantity",
-        type: "number",
-        min: "1",
-        max: availableQuantity > 0 ? String(availableQuantity) : undefined,
-        step: "1",
-        placeholder: availableQuantity > 0 ? `Available ${availableQuantity}` : "0",
-        value: form.quantity,
-        onChange,
-        disabled: availableQuantity === 0,
-      }),
       h(
         "label",
         null,
@@ -403,6 +410,18 @@ function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange
         }),
         h(DataList, { id: "issueBinOptions", values: stockOptions.bins }),
       ),
+      h(TextInput, {
+        label: "Quantity",
+        name: "quantity",
+        type: "number",
+        min: "1",
+        max: availableQuantity > 0 ? String(availableQuantity) : undefined,
+        step: "1",
+        placeholder: availableQuantity > 0 ? `Available ${availableQuantity}` : "0",
+        value: form.quantity,
+        onChange,
+        disabled: availableQuantity === 0,
+      }),
       h(TextInput, { label: "Issued To", name: "issuedTo", placeholder: "Department, person, or site", value: form.issuedTo, onChange }),
       h(TextInput, { label: "Received By", name: "receivedBy", placeholder: "Receiver name", value: form.receivedBy, onChange }),
       h(TextInput, { label: "Received Date", name: "receivedDate", type: "date", value: form.receivedDate, onChange }),
@@ -769,7 +788,14 @@ function App() {
         next.fromBin = "";
         next.quantity = "";
       } else if (name === "fromBin") {
-        next.quantity = "";
+        const nextAvailableQuantity = getAvailableQuantityForIssue(availableStockRows, next);
+        const currentQuantity = toPositiveQuantity(next.quantity);
+
+        if (nextAvailableQuantity <= 0) {
+          next.quantity = "";
+        } else if (currentQuantity > nextAvailableQuantity) {
+          next.quantity = String(nextAvailableQuantity);
+        }
       }
 
       return next;
