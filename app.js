@@ -13,7 +13,7 @@ import {
 import { exportReport } from "./export-report.js";
 import { sessionManager } from "./session-manager.js";
 
-const { useEffect, useRef, useState } = React;
+const { useEffect, useMemo, useRef, useState } = React;
 const h = React.createElement;
 
 const purchaseInitial = {
@@ -78,6 +78,70 @@ function fieldValue(entry, key, fallback = "") {
 
 function displayValue(value, fallback = "-") {
   return value || fallback;
+}
+
+function toPositiveQuantity(value) {
+  const quantity = Number(value);
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : 0;
+}
+
+function normalizeOptionValue(value) {
+  return String(value || "").trim();
+}
+
+function stockCompositeKey(entry) {
+  return [
+    normalizeOptionValue(entry.itemType),
+    normalizeOptionValue(entry.brand),
+    normalizeOptionValue(entry.model),
+    normalizeOptionValue(entry.item),
+    normalizeOptionValue(entry.storageSlot || entry.fromBin),
+  ].join("|||");
+}
+
+function buildAvailableStock(entries, issues, excludedIssueId = null) {
+  const stock = new Map();
+
+  entries.forEach((entry) => {
+    const key = stockCompositeKey(entry);
+    const current = stock.get(key);
+    const quantity = toPositiveQuantity(entry.quantity);
+
+    if (!current) {
+      stock.set(key, {
+        itemType: normalizeOptionValue(entry.itemType),
+        brand: normalizeOptionValue(entry.brand),
+        model: normalizeOptionValue(entry.model),
+        item: normalizeOptionValue(entry.item),
+        fromBin: normalizeOptionValue(entry.storageSlot),
+        quantity,
+      });
+      return;
+    }
+
+    current.quantity += quantity;
+  });
+
+  issues.forEach((entry) => {
+    if (excludedIssueId && entry.id === excludedIssueId) {
+      return;
+    }
+
+    const key = stockCompositeKey(entry);
+    const current = stock.get(key);
+
+    if (!current) {
+      return;
+    }
+
+    current.quantity = Math.max(0, current.quantity - toPositiveQuantity(entry.quantity));
+  });
+
+  return [...stock.values()].filter((entry) => entry.quantity > 0);
+}
+
+function distinctValues(rows, field) {
+  return [...new Set(rows.map((row) => row[field]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
 
 function DataList({ id, values }) {
@@ -207,7 +271,7 @@ function PurchaseForm({
   );
 }
 
-function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange, onClose, onSubmit }) {
+function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange, onClose, onSubmit, stockOptions, availableQuantity }) {
   const entityRef = useRef(null);
 
   useEffect(() => {
@@ -241,13 +305,84 @@ function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange
         null,
         h("span", null, "Item Type"),
         h("input", { name: "itemType", type: "text", list: "issueItemTypeOptions", placeholder: "Smoke Detection (FDS)", required: true, value: form.itemType, onChange }),
-        h(DataList, { id: "issueItemTypeOptions", values: ["Smoke Detection (FDS)", "Single Needle Machine spare"] }),
+        h(DataList, { id: "issueItemTypeOptions", values: stockOptions.itemTypes }),
       ),
-      h(TextInput, { label: "Brand", name: "brand", placeholder: "Brand name", value: form.brand, onChange }),
-      h(TextInput, { label: "Model", name: "model", placeholder: "Product model or item name", value: form.model, onChange }),
-      h(TextInput, { label: "Item", name: "item", placeholder: "Item name", value: form.item, onChange }),
-      h(TextInput, { label: "Quantity", name: "quantity", type: "number", min: "0", step: "1", placeholder: "0", value: form.quantity, onChange }),
-      h(TextInput, { label: "From BIN", name: "fromBin", placeholder: "BIN A3 / Rack 2", value: form.fromBin, onChange }),
+      h(
+        "label",
+        null,
+        h("span", null, "Brand"),
+        h("input", {
+          name: "brand",
+          type: "text",
+          list: "issueBrandOptions",
+          placeholder: "Brand name",
+          required: true,
+          disabled: stockOptions.brands.length === 0,
+          value: form.brand,
+          onChange,
+        }),
+        h(DataList, { id: "issueBrandOptions", values: stockOptions.brands }),
+      ),
+      h(
+        "label",
+        null,
+        h("span", null, "Model"),
+        h("input", {
+          name: "model",
+          type: "text",
+          list: "issueModelOptions",
+          placeholder: "Product model or item name",
+          required: true,
+          disabled: stockOptions.models.length === 0,
+          value: form.model,
+          onChange,
+        }),
+        h(DataList, { id: "issueModelOptions", values: stockOptions.models }),
+      ),
+      h(
+        "label",
+        null,
+        h("span", null, "Item"),
+        h("input", {
+          name: "item",
+          type: "text",
+          list: "issueItemOptions",
+          placeholder: "Item name",
+          required: true,
+          disabled: stockOptions.items.length === 0,
+          value: form.item,
+          onChange,
+        }),
+        h(DataList, { id: "issueItemOptions", values: stockOptions.items }),
+      ),
+      h(TextInput, {
+        label: "Quantity",
+        name: "quantity",
+        type: "number",
+        min: "1",
+        max: availableQuantity > 0 ? String(availableQuantity) : undefined,
+        step: "1",
+        placeholder: availableQuantity > 0 ? `Available ${availableQuantity}` : "0",
+        value: form.quantity,
+        onChange,
+        disabled: availableQuantity === 0,
+      }),
+      h(
+        "label",
+        null,
+        h("span", null, "From BIN"),
+        h("input", {
+          name: "fromBin",
+          type: "text",
+          list: "issueBinOptions",
+          placeholder: "BIN A3 / Rack 2",
+          required: true,
+          disabled: stockOptions.bins.length === 0,
+          value: form.fromBin,
+          onChange,
+        }),
+        h(DataList, { id: "issueBinOptions", values: stockOptions.bins }),
+      ),
       h(TextInput, { label: "Issued To", name: "issuedTo", placeholder: "Department, person, or site", value: form.issuedTo, onChange }),
       h(TextInput, { label: "Received By", name: "receivedBy", placeholder: "Receiver name", value: form.receivedBy, onChange }),
       h(TextInput, { label: "Received Date", name: "receivedDate", type: "date", value: form.receivedDate, onChange }),
@@ -416,6 +551,46 @@ function App() {
   const [loggingOut, setLoggingOut] = useState(false);
   const purchasePanelRef = useRef(null);
   const issuePanelRef = useRef(null);
+  const editingIssueId = editingIssueIndex !== null ? issues[editingIssueIndex]?.id || null : null;
+  const availableStockRows = useMemo(() => buildAvailableStock(entries, issues, editingIssueId), [entries, issues, editingIssueId]);
+  const issueFilteredByType = useMemo(
+    () => availableStockRows.filter((row) => !issueForm.itemType || row.itemType === normalizeOptionValue(issueForm.itemType)),
+    [availableStockRows, issueForm.itemType],
+  );
+  const issueFilteredByBrand = useMemo(
+    () => issueFilteredByType.filter((row) => !issueForm.brand || row.brand === normalizeOptionValue(issueForm.brand)),
+    [issueFilteredByType, issueForm.brand],
+  );
+  const issueFilteredByModel = useMemo(
+    () => issueFilteredByBrand.filter((row) => !issueForm.model || row.model === normalizeOptionValue(issueForm.model)),
+    [issueFilteredByBrand, issueForm.model],
+  );
+  const issueFilteredByItem = useMemo(
+    () => issueFilteredByModel.filter((row) => !issueForm.item || row.item === normalizeOptionValue(issueForm.item)),
+    [issueFilteredByModel, issueForm.item],
+  );
+  const issueFilteredByBin = useMemo(
+    () => issueFilteredByItem.filter((row) => !issueForm.fromBin || row.fromBin === normalizeOptionValue(issueForm.fromBin)),
+    [issueFilteredByItem, issueForm.fromBin],
+  );
+  const issueStockOptions = useMemo(
+    () => ({
+      itemTypes: distinctValues(availableStockRows, "itemType"),
+      brands: distinctValues(issueFilteredByType, "brand"),
+      models: distinctValues(issueFilteredByBrand, "model"),
+      items: distinctValues(issueFilteredByModel, "item"),
+      bins: distinctValues(issueFilteredByItem, "fromBin"),
+    }),
+    [availableStockRows, issueFilteredByType, issueFilteredByBrand, issueFilteredByModel, issueFilteredByItem],
+  );
+  const availableIssueQuantity = useMemo(() => {
+    if (!issueForm.itemType || !issueForm.brand || !issueForm.model || !issueForm.item || !issueForm.fromBin) {
+      return 0;
+    }
+
+    const match = issueFilteredByBin.find((row) => row.fromBin === normalizeOptionValue(issueForm.fromBin));
+    return match?.quantity || 0;
+  }, [issueFilteredByBin, issueForm.itemType, issueForm.brand, issueForm.model, issueForm.item, issueForm.fromBin]);
 
   useEffect(() => {
     let stopEntriesSubscription = null;
@@ -549,7 +724,33 @@ function App() {
 
   function handleIssueChange(event) {
     const { name, value } = event.target;
-    setIssueForm((current) => ({ ...current, [name]: value }));
+    setIssueForm((current) => {
+      const next = { ...current, [name]: value };
+
+      if (name === "itemType") {
+        next.brand = "";
+        next.model = "";
+        next.item = "";
+        next.fromBin = "";
+        next.quantity = "";
+      } else if (name === "brand") {
+        next.model = "";
+        next.item = "";
+        next.fromBin = "";
+        next.quantity = "";
+      } else if (name === "model") {
+        next.item = "";
+        next.fromBin = "";
+        next.quantity = "";
+      } else if (name === "item") {
+        next.fromBin = "";
+        next.quantity = "";
+      } else if (name === "fromBin") {
+        next.quantity = "";
+      }
+
+      return next;
+    });
   }
 
   function openNewPurchase() {
@@ -610,6 +811,20 @@ function App() {
     setIssueSaving(true);
 
     try {
+      const requestedQuantity = toPositiveQuantity(issueForm.quantity);
+
+      if (availableIssueQuantity <= 0) {
+        throw new Error("No stock available for the selected issue item.");
+      }
+
+      if (requestedQuantity <= 0) {
+        throw new Error("Issue quantity must be greater than zero.");
+      }
+
+      if (requestedQuantity > availableIssueQuantity) {
+        throw new Error(`Only ${availableIssueQuantity} item(s) available in stock.`);
+      }
+
       if (editingIssueIndex === null) {
         await addIssueEntry(issueForm);
         setIssueStatus("Issue added.");
@@ -784,6 +999,8 @@ function App() {
           onChange: handleIssueChange,
           onClose: closeIssue,
           onSubmit: submitIssue,
+          stockOptions: issueStockOptions,
+          availableQuantity: availableIssueQuantity,
         }),
         h(IssueTable, {
           entries: issues,
