@@ -191,8 +191,8 @@ function PurchaseForm({
       h(
         "label",
         null,
-        h("span", null, "Via"),
-        h("input", { name: "via", type: "text", list: "viaOptions", placeholder: "Select or type via", required: true, value: form.via, onChange }),
+        h("span", null, "Supplier"),
+        h("input", { name: "via", type: "text", list: "viaOptions", placeholder: "Select or type supplier", required: true, value: form.via, onChange }),
         h(DataList, { id: "viaOptions", values: ["Asian", "Direct", "MAMICO"] }),
       ),
       h(TextInput, { label: "Storage Slot", name: "storageSlot", placeholder: "Rack A3 / Box 12 / Floor 2", value: form.storageSlot, onChange }),
@@ -317,7 +317,7 @@ function PurchaseTable({ entries, isLoading, error, onEdit, onDelete }) {
           h(
             "tr",
             null,
-            ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Via", "Storage Slot", "Remarks", "Actions"].map((heading) =>
+            ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Remarks", "Actions"].map((heading) =>
               h("th", { key: heading }, heading),
             ),
           ),

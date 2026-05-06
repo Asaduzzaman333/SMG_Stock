@@ -125,14 +125,30 @@ function matchesFilters(entry, filters) {
 }
 
 function buildPurchaseRows(entries, filters) {
-  const groups = new Map();
-
-  entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
-    const group = ensurePurchaseGroup(groups, entry);
-    group.total += toQuantity(entry.quantity);
-  });
-
-  return sortBaseRows([...groups.values()]);
+  return entries
+    .filter((entry) => matchesFilters(entry, filters))
+    .map((entry) => ({
+      id: entry.id,
+      itemType: entry.itemType || "-",
+      date: entry.date || "-",
+      brand: entry.brand || "-",
+      model: entry.model || "-",
+      item: entry.item || "-",
+      rate: entry.rate || "",
+      quantity: toQuantity(entry.quantity),
+      currency: entry.currency || "-",
+      via: entry.via || "-",
+      storageSlot: entry.storageSlot || "-",
+      remarks: entry.remarks || "-",
+    }))
+    .sort(
+      (a, b) =>
+        a.itemType.localeCompare(b.itemType) ||
+        a.brand.localeCompare(b.brand) ||
+        a.model.localeCompare(b.model) ||
+        a.item.localeCompare(b.item) ||
+        a.date.localeCompare(b.date),
+    );
 }
 
 function buildIssueRows(issues, filters) {
@@ -195,7 +211,9 @@ function SummaryHead({ activeView }) {
       h(
         "tr",
         null,
-        ["Item Type", "Brand", "Model", "Item", "Total Purchases"].map((heading) => h("th", { key: heading }, heading)),
+        ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Remarks"].map((heading) =>
+          h("th", { key: heading }, heading),
+        ),
       ),
     );
   }
@@ -236,7 +254,7 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
 
   if (activeView === "purchases") {
     if (rows.length === 0) {
-      return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 5 }, "No purchase data found.")));
+      return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 11 }, "No purchase data found.")));
     }
 
     return h(
@@ -245,12 +263,18 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
       rows.map((row) =>
         h(
           "tr",
-          { key: baseKey(row) },
+          { key: row.id || [baseKey(row), row.date, row.via, row.storageSlot].join("|||") },
           h("td", { className: "sticky-col item-type-cell" }, row.itemType),
+          h("td", null, row.date),
           h("td", { className: "sticky-col brand-cell" }, row.brand),
           h("td", { className: "sticky-col model-cell" }, row.model),
           h("td", { className: "sticky-col item-cell" }, row.item),
-          h("td", { className: "qty-cell" }, row.total || ""),
+          h("td", { className: "qty-cell" }, row.rate || ""),
+          h("td", { className: "qty-cell" }, row.quantity || ""),
+          h("td", null, row.currency),
+          h("td", null, row.via),
+          h("td", null, row.storageSlot),
+          h("td", null, row.remarks),
         ),
       ),
     );
@@ -310,8 +334,8 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
 function exportRowsForView(activeView, rows) {
   if (activeView === "purchases") {
     return [
-      ["Item Type", "Brand", "Model", "Item", "Total Purchases"],
-      ...rows.map((row) => [row.itemType, row.brand, row.model, row.item, row.total || ""]),
+      ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Remarks"],
+      ...rows.map((row) => [row.itemType, row.date, row.brand, row.model, row.item, row.rate || "", row.quantity || "", row.currency, row.via, row.storageSlot, row.remarks]),
     ];
   }
 

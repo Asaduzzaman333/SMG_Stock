@@ -63,26 +63,33 @@ function buildStockSummarySheet(entries, issues, filters = {}) {
 }
 
 function buildPurchaseSummarySheet(entries, filters = {}) {
-  const groups = new Map();
-
-  entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
-    const group = ensureGroup(groups, entry);
-    group.total += toExportQuantity(entry.quantity);
-  });
-
-  const rows = [...groups.values()]
+  const rows = entries
+    .filter((entry) => matchesFilters(entry, filters))
     .sort(
       (a, b) =>
         a.itemType.localeCompare(b.itemType) ||
         a.brand.localeCompare(b.brand) ||
         a.model.localeCompare(b.model) ||
-        a.item.localeCompare(b.item),
+        a.item.localeCompare(b.item) ||
+        (a.date || "").localeCompare(b.date || ""),
     )
-    .map((group) => [group.itemType, group.brand, group.model, group.item, group.total || ""]);
+    .map((entry) => [
+      entry.itemType || "",
+      entry.date || "",
+      entry.brand || "",
+      entry.model || "",
+      entry.item || "",
+      Number(entry.rate) || "",
+      toExportQuantity(entry.quantity),
+      entry.currency || "",
+      entry.via || "",
+      entry.storageSlot || "",
+      entry.remarks || "",
+    ]);
 
   return {
     rows: [
-      ["Item Type", "Brand", "Model", "Item", "Total Purchases"],
+      ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Remarks"],
       ...rows,
     ],
   };
@@ -160,7 +167,7 @@ function buildPurchaseRows(entries) {
       "Rate",
       "Quantity",
       "Currency",
-      "Via",
+      "Supplier",
       "Storage Slot",
       "Remarks",
     ],
