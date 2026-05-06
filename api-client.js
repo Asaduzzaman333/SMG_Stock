@@ -87,6 +87,11 @@ export async function logoutCurrentUser() {
   await request("/api/auth", { method: "DELETE" });
 }
 
+export async function refreshSession() {
+  const { user } = await request("/api/auth", { method: "PATCH" });
+  return user;
+}
+
 export function getPurchaseEntries() {
   return request("/api/purchase-entries");
 }

@@ -13,6 +13,7 @@ import {
   updatePurchaseEntry,
 } from "./api-client.js";
 import { exportReport } from "./export-report.js";
+import { sessionManager } from "./session-manager.js";
 
 const { useEffect, useRef, useState } = React;
 const h = React.createElement;
@@ -434,7 +435,7 @@ function App() {
 
     async function initPage() {
       try {
-        await requireAuth("login.html");
+        await sessionManager.requireAuth("login.html");
 
         const loadEntries = new Promise((resolve) => {
           let settled = false;
@@ -711,7 +712,7 @@ function App() {
     setLoggingOut(true);
 
     try {
-      await logoutCurrentUser();
+      await sessionManager.logout();
       window.location.replace("login.html");
     } catch (error) {
       setPurchaseStatus(formatRequestError(error, "Logout failed."));

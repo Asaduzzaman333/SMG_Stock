@@ -1,4 +1,5 @@
 import { loginWithEmail, redirectIfAuthenticated } from "./api-client.js";
+import { sessionManager } from "./session-manager.js";
 
 const { useEffect, useState } = React;
 const h = React.createElement;
@@ -20,7 +21,11 @@ function LoginApp() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    redirectIfAuthenticated("index.html");
+    sessionManager.verifySession().then((user) => {
+      if (user) {
+        window.location.replace("index.html");
+      }
+    });
   }, []);
 
   async function handleSubmit(event) {
@@ -30,6 +35,8 @@ function LoginApp() {
 
     try {
       await loginWithEmail(email.trim(), password);
+      // Initialize session manager after successful login
+      await sessionManager.initialize();
       window.location.replace("index.html");
     } catch (error) {
       setStatus(formatRequestError(error, "Login failed."));

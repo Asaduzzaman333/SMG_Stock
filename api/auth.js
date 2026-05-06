@@ -18,7 +18,7 @@ function readBody(req) {
 }
 
 function sendMethodNotAllowed(res) {
-  res.setHeader("Allow", "GET,POST,DELETE");
+  res.setHeader("Allow", "GET,POST,PATCH,DELETE");
   res.status(405).json({ error: "Method not allowed." });
 }
 
@@ -53,6 +53,20 @@ export default async function handler(req, res) {
     if (req.method === "DELETE") {
       res.setHeader("Set-Cookie", clearSessionCookie());
       res.status(200).json({ ok: true });
+      return;
+    }
+
+    if (req.method === "PATCH") {
+      const session = getSession(req);
+
+      if (!session) {
+        res.status(401).json({ error: "Session not found." });
+        return;
+      }
+
+      // Refresh the session cookie with a new expiration time
+      res.setHeader("Set-Cookie", createSessionCookie(session.email));
+      res.status(200).json({ user: { email: session.email } });
       return;
     }
 
