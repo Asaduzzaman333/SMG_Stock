@@ -4,24 +4,69 @@ export class SessionManager {
     this.sessionCheckInterval = null;
     this.sessionRefreshInterval = null;
     this.sessionCheckTimeout = 30000; // Check every 30 seconds
-    this.sessionRefreshTimeout = 6 * 60 * 60 * 1000; // Refresh every 6 hours (7 day max - 1 hour buffer)
+    this.sessionRefreshTimeout = 6 * 60 * 60 * 1000; // Refresh every 6 hours
     this.currentUser = null;
+    this.isInitialized = false;
+    this.storageKey = "smg_session_init";
   }
 
   /**
    * Initialize session with auto-refresh
    */
   async initialize() {
+    if (this.isInitialized) {
+      return this.currentUser;
+    }
+
     try {
       const { user } = await this._request("/api/auth");
       this.currentUser = user;
-      this._startSessionMonitoring();
+      this.isInitialized = true;
+      if (user) {
+        this._setSessionFlag();
+        this._startSessionMonitoring();
+      }
       return user;
     } catch (error) {
+      this.isInitialized = true; // Mark as initialized even on error to prevent retries
       if (error.status === 401) {
+        this._clearSessionFlag();
         return null;
       }
       throw error;
+    }
+  }
+
+  /**
+   * Track session initialization flag in localStorage
+   */
+  _setSessionFlag() {
+    try {
+      window.localStorage.setItem(this.storageKey, "true");
+    } catch {
+      // localStorage might be blocked in some environments
+    }
+  }
+
+  /**
+   * Clear session initialization flag
+   */
+  _clearSessionFlag() {
+    try {
+      window.localStorage.removeItem(this.storageKey);
+    } catch {
+      // localStorage might be blocked
+    }
+  }
+
+  /**
+   * Check if session was previously initialized
+   */
+  _hadSession() {
+    try {
+      return window.localStorage.getItem(this.storageKey) === "true";
+    } catch {
+      return false;
     }
   }
 
@@ -50,6 +95,8 @@ export class SessionManager {
     } catch (error) {
       if (error.status === 401) {
         this.currentUser = null;
+        this.isInitialized = false;
+        this._clearSessionFlag();
         return null;
       }
       throw error;
@@ -64,6 +111,8 @@ export class SessionManager {
       await this._request("/api/auth", { method: "DELETE" });
     } finally {
       this.currentUser = null;
+      this.isInitialized = false;
+      this._clearSessionFlag();
       this._stopSessionMonitoring();
     }
   }
@@ -72,20 +121,12 @@ export class SessionManager {
    * Require authentication or redirect
    */
   async requireAuth(redirectTo = "login.html") {
-    if (this.currentUser) {
-      return this.currentUser;
+    if (!this.isInitialized) {
+      await this.initialize();
     }
 
-    try {
-      const { user } = await this._request("/api/auth");
-      if (user) {
-        this.currentUser = user;
-        return user;
-      }
-    } catch (error) {
-      if (error.status !== 401) {
-        throw error;
-      }
+    if (this.currentUser) {
+      return this.currentUser;
     }
 
     // Not authenticated, redirect to login
