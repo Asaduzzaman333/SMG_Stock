@@ -125,30 +125,33 @@ function matchesFilters(entry, filters) {
 }
 
 function buildPurchaseRows(entries, filters) {
-  return entries
-    .filter((entry) => matchesFilters(entry, filters))
-    .map((entry) => ({
-      id: entry.id,
-      itemType: entry.itemType || "-",
-      date: entry.date || "-",
-      brand: entry.brand || "-",
-      model: entry.model || "-",
-      item: entry.item || "-",
-      rate: entry.rate || "",
-      quantity: toQuantity(entry.quantity),
-      currency: entry.currency || "-",
-      via: entry.via || "-",
-      storageSlot: entry.storageSlot || "-",
-      totalPurchases: toQuantity(entry.quantity),
-    }))
-    .sort(
-      (a, b) =>
-        a.itemType.localeCompare(b.itemType) ||
-        a.brand.localeCompare(b.brand) ||
-        a.model.localeCompare(b.model) ||
-        a.item.localeCompare(b.item) ||
-        a.date.localeCompare(b.date),
-    );
+  const groups = new Map();
+
+  entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
+    const key = [baseKey(entry), entry.via || "-"].join("|||");
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        itemType: entry.itemType || "-",
+        brand: entry.brand || "-",
+        model: entry.model || "-",
+        item: entry.item || "-",
+        via: entry.via || "-",
+        totalPurchases: 0,
+      });
+    }
+
+    groups.get(key).totalPurchases += toQuantity(entry.quantity);
+  });
+
+  return [...groups.values()].sort(
+    (a, b) =>
+      a.itemType.localeCompare(b.itemType) ||
+      a.brand.localeCompare(b.brand) ||
+      a.model.localeCompare(b.model) ||
+      a.item.localeCompare(b.item) ||
+      a.via.localeCompare(b.via),
+  );
 }
 
 function buildIssueRows(issues, filters) {
@@ -211,7 +214,7 @@ function SummaryHead({ activeView }) {
       h(
         "tr",
         null,
-        ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Total Purchases"].map((heading) =>
+        ["Item Type", "Brand", "Model", "Item", "Supplier", "Total Purchases"].map((heading) =>
           h("th", { key: heading }, heading),
         ),
       ),
@@ -225,7 +228,7 @@ function SummaryHead({ activeView }) {
       h(
         "tr",
         null,
-        ["Item Type", "Brand", "Model", "Item", "Entity", "From BIN", "Received By", "Received Date", "Total Issues"].map((heading) =>
+        ["Item Type", "Brand", "Model", "Item", "Entity", "Total Issues"].map((heading) =>
           h("th", { key: heading }, heading),
         ),
       ),
@@ -254,7 +257,7 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
 
   if (activeView === "purchases") {
     if (rows.length === 0) {
-      return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 11 }, "No purchase data found.")));
+      return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 6 }, "No purchase data found.")));
     }
 
     return h(
@@ -263,17 +266,12 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
       rows.map((row) =>
         h(
           "tr",
-          { key: row.id || [baseKey(row), row.date, row.via, row.storageSlot].join("|||") },
+          { key: [baseKey(row), row.via].join("|||") },
           h("td", { className: "sticky-col item-type-cell" }, row.itemType),
-          h("td", null, row.date),
           h("td", { className: "sticky-col brand-cell" }, row.brand),
           h("td", { className: "sticky-col model-cell" }, row.model),
           h("td", { className: "sticky-col item-cell" }, row.item),
-          h("td", { className: "qty-cell" }, row.rate || ""),
-          h("td", { className: "qty-cell" }, row.quantity || ""),
-          h("td", null, row.currency),
           h("td", null, row.via),
-          h("td", null, row.storageSlot),
           h("td", { className: "qty-cell" }, row.totalPurchases || ""),
         ),
       ),
@@ -282,7 +280,7 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
 
   if (activeView === "issues") {
     if (rows.length === 0) {
-      return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 9 }, "No issue data found.")));
+      return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 6 }, "No issue data found.")));
     }
 
     return h(
@@ -297,9 +295,6 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
           h("td", { className: "sticky-col model-cell" }, row.model),
           h("td", { className: "sticky-col item-cell" }, row.item),
           h("td", null, row.entity),
-          h("td", null, row.fromBin),
-          h("td", null, row.receivedBy),
-          h("td", null, row.receivedDate),
           h("td", { className: "qty-cell" }, row.issued || ""),
         ),
       ),
@@ -334,15 +329,15 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
 function exportRowsForView(activeView, rows) {
   if (activeView === "purchases") {
     return [
-      ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Total Purchases"],
-      ...rows.map((row) => [row.itemType, row.date, row.brand, row.model, row.item, row.rate || "", row.quantity || "", row.currency, row.via, row.storageSlot, row.totalPurchases || ""]),
+      ["Item Type", "Brand", "Model", "Item", "Supplier", "Total Purchases"],
+      ...rows.map((row) => [row.itemType, row.brand, row.model, row.item, row.via, row.totalPurchases || ""]),
     ];
   }
 
   if (activeView === "issues") {
     return [
-      ["Item Type", "Brand", "Model", "Item", "Entity", "From BIN", "Received By", "Received Date", "Total Issues"],
-      ...rows.map((row) => [row.itemType, row.brand, row.model, row.item, row.entity, row.fromBin, row.receivedBy, row.receivedDate, row.issued || ""]),
+      ["Item Type", "Brand", "Model", "Item", "Entity", "Total Issues"],
+      ...rows.map((row) => [row.itemType, row.brand, row.model, row.item, row.entity, row.issued || ""]),
     ];
   }
 

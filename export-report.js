@@ -63,33 +63,39 @@ function buildStockSummarySheet(entries, issues, filters = {}) {
 }
 
 function buildPurchaseSummarySheet(entries, filters = {}) {
-  const rows = entries
-    .filter((entry) => matchesFilters(entry, filters))
+  const groups = new Map();
+
+  entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
+    const key = [groupKey(entry), entry.via || "-"].join("|||");
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        itemType: entry.itemType || "-",
+        brand: entry.brand || "-",
+        model: entry.model || "-",
+        item: entry.item || "-",
+        via: entry.via || "-",
+        totalPurchases: 0,
+      });
+    }
+
+    groups.get(key).totalPurchases += toExportQuantity(entry.quantity);
+  });
+
+  const rows = [...groups.values()]
     .sort(
       (a, b) =>
         a.itemType.localeCompare(b.itemType) ||
         a.brand.localeCompare(b.brand) ||
         a.model.localeCompare(b.model) ||
         a.item.localeCompare(b.item) ||
-        (a.date || "").localeCompare(b.date || ""),
+        a.via.localeCompare(b.via),
     )
-    .map((entry) => [
-      entry.itemType || "",
-      entry.date || "",
-      entry.brand || "",
-      entry.model || "",
-      entry.item || "",
-      Number(entry.rate) || "",
-      toExportQuantity(entry.quantity),
-      entry.currency || "",
-      entry.via || "",
-      entry.storageSlot || "",
-      toExportQuantity(entry.quantity),
-    ]);
+    .map((group) => [group.itemType, group.brand, group.model, group.item, group.via, group.totalPurchases || ""]);
 
   return {
     rows: [
-      ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Total Purchases"],
+      ["Item Type", "Brand", "Model", "Item", "Supplier", "Total Purchases"],
       ...rows,
     ],
   };
@@ -136,21 +142,11 @@ function buildIssueSummarySheet(issues, filters = {}) {
         a.receivedBy.localeCompare(b.receivedBy) ||
         a.receivedDate.localeCompare(b.receivedDate),
     )
-    .map((group) => [
-      group.itemType,
-      group.brand,
-      group.model,
-      group.item,
-      group.entity,
-      group.fromBin,
-      group.receivedBy,
-      group.receivedDate,
-      group.issued || "",
-    ]);
+    .map((group) => [group.itemType, group.brand, group.model, group.item, group.entity, group.issued || ""]);
 
   return {
     rows: [
-      ["Item Type", "Brand", "Model", "Item", "Entity", "From BIN", "Received By", "Received Date", "Total Issues"],
+      ["Item Type", "Brand", "Model", "Item", "Entity", "Total Issues"],
       ...rows,
     ],
   };
