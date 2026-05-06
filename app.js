@@ -89,6 +89,21 @@ function normalizeOptionValue(value) {
   return String(value || "").trim();
 }
 
+function normalizedCompareValue(value) {
+  return normalizeOptionValue(value).toLowerCase();
+}
+
+function valueMatchesSelection(optionValue, selectedValue) {
+  const selected = normalizedCompareValue(selectedValue);
+
+  if (!selected) {
+    return true;
+  }
+
+  const option = normalizedCompareValue(optionValue);
+  return option === selected || option.includes(selected);
+}
+
 function stockCompositeKey(entry) {
   return [
     normalizeOptionValue(entry.itemType),
@@ -163,6 +178,7 @@ function TextInput({ label, name, value, onChange, type = "text", list, placehol
       list,
       placeholder,
       required,
+      autoComplete: "off",
       value,
       onChange,
       ...rest,
@@ -291,12 +307,12 @@ function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange
     ),
     h(
       "form",
-      { className: "purchase-form", id: "issueForm", onSubmit },
+      { className: "purchase-form", id: "issueForm", onSubmit, autoComplete: "off" },
       h(
         "label",
         null,
         h("span", null, "Entity"),
-        h("input", { ref: entityRef, name: "entity", type: "text", list: "entityOptions", placeholder: "Select or type entity", required: true, value: form.entity, onChange }),
+        h("input", { ref: entityRef, name: "entity", type: "text", list: "entityOptions", placeholder: "Select or type entity", required: true, autoComplete: "off", value: form.entity, onChange }),
         h(DataList, { id: "entityOptions", values: ["SSIL", "SML", "Lumbini"] }),
       ),
       h(TextInput, { label: "Date", name: "date", type: "date", value: form.date, onChange }),
@@ -304,7 +320,7 @@ function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange
         "label",
         null,
         h("span", null, "Item Type"),
-        h("input", { name: "itemType", type: "text", list: "issueItemTypeOptions", placeholder: "Smoke Detection (FDS)", required: true, value: form.itemType, onChange }),
+        h("input", { name: "itemType", type: "text", list: "issueItemTypeOptions", placeholder: "Smoke Detection (FDS)", required: true, autoComplete: "off", value: form.itemType, onChange }),
         h(DataList, { id: "issueItemTypeOptions", values: stockOptions.itemTypes }),
       ),
       h(
@@ -318,6 +334,7 @@ function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange
           placeholder: "Brand name",
           required: true,
           disabled: stockOptions.brands.length === 0,
+          autoComplete: "off",
           value: form.brand,
           onChange,
         }),
@@ -334,6 +351,7 @@ function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange
           placeholder: "Product model or item name",
           required: true,
           disabled: stockOptions.models.length === 0,
+          autoComplete: "off",
           value: form.model,
           onChange,
         }),
@@ -350,6 +368,7 @@ function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange
           placeholder: "Item name",
           required: true,
           disabled: stockOptions.items.length === 0,
+          autoComplete: "off",
           value: form.item,
           onChange,
         }),
@@ -376,8 +395,9 @@ function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange
           type: "text",
           list: "issueBinOptions",
           placeholder: "BIN A3 / Rack 2",
-          required: true,
+          required: stockOptions.bins.length > 0,
           disabled: stockOptions.bins.length === 0,
+          autoComplete: "off",
           value: form.fromBin,
           onChange,
         }),
@@ -554,23 +574,23 @@ function App() {
   const editingIssueId = editingIssueIndex !== null ? issues[editingIssueIndex]?.id || null : null;
   const availableStockRows = useMemo(() => buildAvailableStock(entries, issues, editingIssueId), [entries, issues, editingIssueId]);
   const issueFilteredByType = useMemo(
-    () => availableStockRows.filter((row) => !issueForm.itemType || row.itemType === normalizeOptionValue(issueForm.itemType)),
+    () => availableStockRows.filter((row) => valueMatchesSelection(row.itemType, issueForm.itemType)),
     [availableStockRows, issueForm.itemType],
   );
   const issueFilteredByBrand = useMemo(
-    () => issueFilteredByType.filter((row) => !issueForm.brand || row.brand === normalizeOptionValue(issueForm.brand)),
+    () => issueFilteredByType.filter((row) => valueMatchesSelection(row.brand, issueForm.brand)),
     [issueFilteredByType, issueForm.brand],
   );
   const issueFilteredByModel = useMemo(
-    () => issueFilteredByBrand.filter((row) => !issueForm.model || row.model === normalizeOptionValue(issueForm.model)),
+    () => issueFilteredByBrand.filter((row) => valueMatchesSelection(row.model, issueForm.model)),
     [issueFilteredByBrand, issueForm.model],
   );
   const issueFilteredByItem = useMemo(
-    () => issueFilteredByModel.filter((row) => !issueForm.item || row.item === normalizeOptionValue(issueForm.item)),
+    () => issueFilteredByModel.filter((row) => valueMatchesSelection(row.item, issueForm.item)),
     [issueFilteredByModel, issueForm.item],
   );
   const issueFilteredByBin = useMemo(
-    () => issueFilteredByItem.filter((row) => !issueForm.fromBin || row.fromBin === normalizeOptionValue(issueForm.fromBin)),
+    () => issueFilteredByItem.filter((row) => valueMatchesSelection(row.fromBin, issueForm.fromBin)),
     [issueFilteredByItem, issueForm.fromBin],
   );
   const issueStockOptions = useMemo(
@@ -584,13 +604,16 @@ function App() {
     [availableStockRows, issueFilteredByType, issueFilteredByBrand, issueFilteredByModel, issueFilteredByItem],
   );
   const availableIssueQuantity = useMemo(() => {
-    if (!issueForm.itemType || !issueForm.brand || !issueForm.model || !issueForm.item || !issueForm.fromBin) {
+    if (!issueForm.itemType || !issueForm.brand || !issueForm.model || !issueForm.item) {
       return 0;
     }
 
-    const match = issueFilteredByBin.find((row) => row.fromBin === normalizeOptionValue(issueForm.fromBin));
-    return match?.quantity || 0;
-  }, [issueFilteredByBin, issueForm.itemType, issueForm.brand, issueForm.model, issueForm.item, issueForm.fromBin]);
+    if (issueForm.fromBin) {
+      return issueFilteredByBin.reduce((sum, row) => sum + row.quantity, 0);
+    }
+
+    return issueFilteredByItem.reduce((sum, row) => sum + row.quantity, 0);
+  }, [issueFilteredByBin, issueFilteredByItem, issueForm.itemType, issueForm.brand, issueForm.model, issueForm.item, issueForm.fromBin]);
 
   useEffect(() => {
     let stopEntriesSubscription = null;
