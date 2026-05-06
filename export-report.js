@@ -1,4 +1,4 @@
-import { getIssueEntries, getPurchaseEntries } from "./firebase-config.js";
+import { getIssueEntries, getPurchaseEntries } from "./api-client.js";
 
 const EXPORT_FLAGS = ["Design Requirement", "Purchased", "Replace", "New", "Extra"];
 const EXPORT_RECEIVED_FLAGS = ["Purchased", "Replace", "New", "Extra"];

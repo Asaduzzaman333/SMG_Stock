@@ -11,7 +11,7 @@ import {
   subscribeToPurchaseEntries,
   updateIssueEntry,
   updatePurchaseEntry,
-} from "./firebase-config.js";
+} from "./api-client.js";
 import { exportReport } from "./export-report.js";
 
 const { useEffect, useRef, useState } = React;
@@ -64,7 +64,7 @@ function finishPageLoad() {
   window.setTimeout(() => pageLoader?.remove(), 650);
 }
 
-function formatFirebaseError(error, fallback) {
+function formatRequestError(error, fallback) {
   if (!error) {
     return fallback;
   }
@@ -468,7 +468,7 @@ function App() {
                 return;
               }
               setPurchaseLoading(false);
-              setPurchaseError(formatFirebaseError(error, "Firebase data load failed."));
+              setPurchaseError(formatRequestError(error, "Data load failed."));
               console.error(error);
               settle();
             },
@@ -507,7 +507,7 @@ function App() {
                 return;
               }
               setIssueLoading(false);
-              setIssueError(formatFirebaseError(error, "Firebase issue load failed."));
+              setIssueError(formatRequestError(error, "Issue load failed."));
               console.error(error);
               settle();
             },
@@ -526,7 +526,7 @@ function App() {
         console.error("Page init error:", error);
         if (isActive && error.message !== "Auth required") {
           setPurchaseLoading(false);
-          setPurchaseError(formatFirebaseError(error, "Authentication check failed."));
+          setPurchaseError(formatRequestError(error, "Authentication check failed."));
         }
         finishPageLoad();
       }
@@ -603,7 +603,7 @@ function App() {
 
       setPurchaseForm(purchaseInitial);
     } catch (error) {
-      setPurchaseStatus(formatFirebaseError(error, "Firebase save failed."));
+      setPurchaseStatus(formatRequestError(error, "Save failed."));
       console.error(error);
     } finally {
       setPurchaseSaving(false);
@@ -626,7 +626,7 @@ function App() {
 
       setIssueForm(issueInitial);
     } catch (error) {
-      setIssueStatus(formatFirebaseError(error, "Firebase issue save failed."));
+      setIssueStatus(formatRequestError(error, "Issue save failed."));
       console.error(error);
     } finally {
       setIssueSaving(false);
@@ -682,7 +682,7 @@ function App() {
       await deletePurchaseEntry(entries[index].id);
       setPurchaseStatus("Entry deleted.");
     } catch (error) {
-      setPurchaseStatus(formatFirebaseError(error, "Firebase delete failed."));
+      setPurchaseStatus(formatRequestError(error, "Delete failed."));
       console.error(error);
     }
   }
@@ -692,7 +692,7 @@ function App() {
       await deleteIssueEntry(issues[index].id);
       setIssueStatus("Issue deleted.");
     } catch (error) {
-      setIssueStatus(formatFirebaseError(error, "Firebase issue delete failed."));
+      setIssueStatus(formatRequestError(error, "Issue delete failed."));
       console.error(error);
     }
   }
@@ -714,7 +714,7 @@ function App() {
       await logoutCurrentUser();
       window.location.replace("login.html");
     } catch (error) {
-      setPurchaseStatus(formatFirebaseError(error, "Logout failed."));
+      setPurchaseStatus(formatRequestError(error, "Logout failed."));
       setLoggingOut(false);
     }
   }

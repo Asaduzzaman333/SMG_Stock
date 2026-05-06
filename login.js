@@ -1,9 +1,9 @@
-import { loginWithEmail, redirectIfAuthenticated } from "./firebase-config.js";
+import { loginWithEmail, redirectIfAuthenticated } from "./api-client.js";
 
 const { useEffect, useState } = React;
 const h = React.createElement;
 
-function formatFirebaseError(error, fallback) {
+function formatRequestError(error, fallback) {
   if (!error) {
     return fallback;
   }
@@ -32,7 +32,7 @@ function LoginApp() {
       await loginWithEmail(email.trim(), password);
       window.location.replace("index.html");
     } catch (error) {
-      setStatus(formatFirebaseError(error, "Login failed."));
+      setStatus(formatRequestError(error, "Login failed."));
     } finally {
       setIsSubmitting(false);
     }

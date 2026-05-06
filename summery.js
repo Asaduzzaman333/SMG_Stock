@@ -3,7 +3,7 @@ import {
   requireAuth,
   subscribeToIssueEntries,
   subscribeToPurchaseEntries,
-} from "./firebase-config.js";
+} from "./api-client.js";
 import { exportReport } from "./export-report.js";
 
 const { useEffect, useMemo, useState } = React;
@@ -44,7 +44,7 @@ function finishPageLoad() {
   window.setTimeout(() => pageLoader?.remove(), 650);
 }
 
-function formatFirebaseError(error, fallback) {
+function formatRequestError(error, fallback) {
   if (!error) {
     return fallback;
   }
@@ -388,7 +388,7 @@ function SummeryApp() {
               if (!isActive) {
                 return;
               }
-              setLoadError(formatFirebaseError(error, "Firebase summary load failed."));
+              setLoadError(formatRequestError(error, "Summary load failed."));
               setPurchaseLoaded(true);
               hasPurchaseData = true;
               console.error(error);
@@ -410,7 +410,7 @@ function SummeryApp() {
               if (!isActive) {
                 return;
               }
-              setLoadError(formatFirebaseError(error, "Firebase issue summary load failed."));
+              setLoadError(formatRequestError(error, "Issue summary load failed."));
               setIssueLoaded(true);
               hasIssueData = true;
               console.error(error);
@@ -425,7 +425,7 @@ function SummeryApp() {
         }
       } catch (error) {
         if (isActive && error.message !== "Auth required") {
-          setLoadError(formatFirebaseError(error, "Authentication check failed."));
+          setLoadError(formatRequestError(error, "Authentication check failed."));
           finishPageLoad();
         }
       }
@@ -489,7 +489,7 @@ function SummeryApp() {
       await logoutCurrentUser();
       window.location.replace("login.html");
     } catch (error) {
-      setLoadError(formatFirebaseError(error, "Logout failed."));
+      setLoadError(formatRequestError(error, "Logout failed."));
       setLoggingOut(false);
     }
   }
