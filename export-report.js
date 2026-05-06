@@ -84,12 +84,12 @@ function buildPurchaseSummarySheet(entries, filters = {}) {
       entry.currency || "",
       entry.via || "",
       entry.storageSlot || "",
-      entry.remarks || "",
+      toExportQuantity(entry.quantity),
     ]);
 
   return {
     rows: [
-      ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Remarks"],
+      ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Total Purchases"],
       ...rows,
     ],
   };

@@ -139,7 +139,7 @@ function buildPurchaseRows(entries, filters) {
       currency: entry.currency || "-",
       via: entry.via || "-",
       storageSlot: entry.storageSlot || "-",
-      remarks: entry.remarks || "-",
+      totalPurchases: toQuantity(entry.quantity),
     }))
     .sort(
       (a, b) =>
@@ -211,7 +211,7 @@ function SummaryHead({ activeView }) {
       h(
         "tr",
         null,
-        ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Remarks"].map((heading) =>
+        ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Total Purchases"].map((heading) =>
           h("th", { key: heading }, heading),
         ),
       ),
@@ -274,7 +274,7 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
           h("td", null, row.currency),
           h("td", null, row.via),
           h("td", null, row.storageSlot),
-          h("td", null, row.remarks),
+          h("td", { className: "qty-cell" }, row.totalPurchases || ""),
         ),
       ),
     );
@@ -334,8 +334,8 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
 function exportRowsForView(activeView, rows) {
   if (activeView === "purchases") {
     return [
-      ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Remarks"],
-      ...rows.map((row) => [row.itemType, row.date, row.brand, row.model, row.item, row.rate || "", row.quantity || "", row.currency, row.via, row.storageSlot, row.remarks]),
+      ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Total Purchases"],
+      ...rows.map((row) => [row.itemType, row.date, row.brand, row.model, row.item, row.rate || "", row.quantity || "", row.currency, row.via, row.storageSlot, row.totalPurchases || ""]),
     ];
   }
 

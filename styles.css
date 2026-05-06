@@ -1027,6 +1027,8 @@ table {
   font-size: 0.82rem;
   line-height: 1.15;
   white-space: normal;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .pivot-table th {
@@ -1048,8 +1050,6 @@ table {
 .pivot-table .item-cell {
   color: #000000;
   font-weight: 900;
-  text-align: left;
-  vertical-align: middle;
   white-space: nowrap;
 }
 
@@ -1060,7 +1060,7 @@ table {
 
 .pivot-table .qty-cell,
 .pivot-table .stock-cell {
-  text-align: right;
+  text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1077,7 +1077,8 @@ th,
 td {
   padding: 17px 14px;
   border-bottom: 1px solid var(--line);
-  text-align: left;
+  text-align: center;
+  vertical-align: middle;
   white-space: nowrap;
 }
 
@@ -1118,6 +1119,7 @@ td {
 .row-actions {
   display: flex;
   gap: 8px;
+  justify-content: center;
 }
 
 .action-btn {
