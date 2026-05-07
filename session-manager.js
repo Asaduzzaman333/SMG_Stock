@@ -120,7 +120,7 @@ export class SessionManager {
   /**
    * Require authentication or redirect
    */
-  async requireAuth(redirectTo = "login.html") {
+  async requireAuth(redirectTo = "/login") {
     if (!this.isInitialized) {
       await this.initialize();
     }

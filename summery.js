@@ -366,7 +366,7 @@ function SummeryApp() {
 
     async function initPage() {
       try {
-        await requireAuth("login.html");
+        await requireAuth("/login");
 
         const loadSummery = new Promise((resolve) => {
           let hasPurchaseData = false;
@@ -490,7 +490,7 @@ function SummeryApp() {
 
     try {
       await logoutCurrentUser();
-      window.location.replace("login.html");
+      window.location.replace("/login");
     } catch (error) {
       setLoadError(formatRequestError(error, "Logout failed."));
       setLoggingOut(false);
@@ -505,15 +505,15 @@ function SummeryApp() {
       { className: "sidebar", "aria-label": "Main navigation" },
       h(
         "a",
-        { className: "brand", href: "index.html", "aria-label": "SMG Stock home" },
-        h("img", { className: "brand-logo", src: "smg-logo-blue.png", alt: "SMG Stock logo" }),
+        { className: "brand", href: "/", "aria-label": "SMG Stock home" },
+        h("img", { className: "brand-logo", src: "/smg-logo-blue.png", alt: "SMG Stock logo" }),
         h("span", null, h("strong", null, "SMG Stock")),
       ),
       h(
         "nav",
         { className: "nav-list" },
-        h("a", { className: "nav-item", href: "index.html" }, "Purchases & Inventory"),
-        h("a", { className: "nav-item active", href: "summery.html" }, "Summery"),
+        h("a", { className: "nav-item", href: "/" }, "Purchases & Inventory"),
+        h("a", { className: "nav-item active", href: "/summery" }, "Summery"),
       ),
     ),
     h(
@@ -528,7 +528,7 @@ function SummeryApp() {
           "div",
           { className: "top-actions" },
           h("button", { className: "ghost-btn", id: "exportReportBtn", type: "button", onClick: handleExport, disabled: exporting }, exporting ? "Preparing Export..." : EXPORT_BUTTON_LABELS[activeView]),
-          h("a", { className: "primary-btn", href: "index.html" }, "Back to Inventory"),
+          h("a", { className: "primary-btn", href: "/" }, "Back to Inventory"),
           h("button", { className: "ghost-btn logout-btn", id: "logoutBtn", type: "button", onClick: handleLogout, disabled: loggingOut }, "Logout"),
         ),
       ),

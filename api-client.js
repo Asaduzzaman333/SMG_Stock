@@ -43,7 +43,7 @@ function createPollingSubscription(load, onData, onError) {
   };
 }
 
-export async function requireAuth(redirectTo = "login.html") {
+export async function requireAuth(redirectTo = "/login") {
   try {
     const { user } = await request("/api/auth");
     return user;
@@ -51,24 +51,6 @@ export async function requireAuth(redirectTo = "login.html") {
     if (error.status === 401) {
       window.location.replace(redirectTo);
       throw new Error("Auth required");
-    }
-
-    throw error;
-  }
-}
-
-export async function redirectIfAuthenticated(target = "index.html") {
-  try {
-    const { user } = await request("/api/auth");
-
-    if (user) {
-      window.location.replace(target);
-    }
-
-    return user;
-  } catch (error) {
-    if (error.status === 401) {
-      return null;
     }
 
     throw error;

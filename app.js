@@ -643,7 +643,7 @@ function App() {
     async function initPage() {
       try {
         // First, ensure session is initialized and user is authenticated
-        const user = await sessionManager.requireAuth("login.html");
+        const user = await sessionManager.requireAuth("/login");
         
         if (!isActive) {
           return;
@@ -971,7 +971,7 @@ function App() {
 
     try {
       await sessionManager.logout();
-      window.location.replace("login.html");
+      window.location.replace("/login");
     } catch (error) {
       setPurchaseStatus(formatRequestError(error, "Logout failed."));
       setLoggingOut(false);
@@ -987,7 +987,7 @@ function App() {
       h(
         "a",
         { className: "brand", href: "#", "aria-label": "SMG Stock home" },
-        h("img", { className: "brand-logo", src: "smg-logo-blue.png", alt: "SMG Stock logo" }),
+        h("img", { className: "brand-logo", src: "/smg-logo-blue.png", alt: "SMG Stock logo" }),
         h("span", null, h("strong", null, "SMG Stock")),
       ),
       h(
@@ -995,7 +995,7 @@ function App() {
         { className: "nav-list" },
         h("a", { className: "nav-item active", href: "#purchases-inventory" }, "Purchases & Inventory"),
         h("a", { className: "nav-item", href: "#issue-register" }, "Issue Register"),
-        h("a", { className: "nav-item", href: "summery.html" }, "Summery"),
+        h("a", { className: "nav-item", href: "/summery" }, "Summery"),
       ),
     ),
     h(

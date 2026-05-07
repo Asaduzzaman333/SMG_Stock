@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { loginWithEmail, redirectIfAuthenticated } from "./api-client.js";
+import { loginWithEmail } from "./api-client.js";
 import { sessionManager } from "./session-manager.js";
 
 const h = React.createElement;
@@ -24,7 +24,7 @@ function LoginApp() {
   useEffect(() => {
     sessionManager.verifySession().then((user) => {
       if (user) {
-        window.location.replace("index.html");
+        window.location.replace("/");
       }
     });
   }, []);
@@ -38,7 +38,7 @@ function LoginApp() {
       await loginWithEmail(email.trim(), password);
       // Initialize session manager after successful login
       await sessionManager.initialize();
-      window.location.replace("index.html");
+      window.location.replace("/");
     } catch (error) {
       setStatus(formatRequestError(error, "Login failed."));
     } finally {
@@ -55,7 +55,7 @@ function LoginApp() {
       h(
         "div",
         { className: "auth-brand" },
-        h("img", { className: "brand-logo", src: "smg-logo-blue.png", alt: "SMG Stock logo" }),
+        h("img", { className: "brand-logo", src: "/smg-logo-blue.png", alt: "SMG Stock logo" }),
         h("div", null, h("strong", null, "SMG Stock"), h("p", null, "Secure inventory access")),
       ),
       h(
