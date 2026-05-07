@@ -1,3 +1,5 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { createRoot } from "react-dom/client";
 import {
   logoutCurrentUser,
   requireAuth,
@@ -6,7 +8,6 @@ import {
 } from "./api-client.js";
 import { exportReport } from "./export-report.js";
 
-const { useEffect, useMemo, useState } = React;
 const h = React.createElement;
 
 const VIEW_TITLES = {
@@ -598,4 +599,4 @@ function SummeryApp() {
   );
 }
 
-ReactDOM.render(h(SummeryApp), document.querySelector("#root"));
+createRoot(document.querySelector("#root")).render(h(SummeryApp));

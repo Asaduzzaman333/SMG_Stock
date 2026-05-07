@@ -1,3 +1,5 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
 import {
   addIssueEntry,
   addPurchaseEntry,
@@ -13,7 +15,6 @@ import {
 import { exportReport } from "./export-report.js";
 import { sessionManager } from "./session-manager.js";
 
-const { useEffect, useMemo, useRef, useState } = React;
 const h = React.createElement;
 
 const purchaseInitial = {
@@ -1063,4 +1064,4 @@ function App() {
   );
 }
 
-ReactDOM.render(h(App), document.querySelector("#root"));
+createRoot(document.querySelector("#root")).render(h(App));

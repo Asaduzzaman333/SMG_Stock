@@ -1,7 +1,8 @@
+import React, { useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
 import { loginWithEmail, redirectIfAuthenticated } from "./api-client.js";
 import { sessionManager } from "./session-manager.js";
 
-const { useEffect, useState } = React;
 const h = React.createElement;
 
 function formatRequestError(error, fallback) {
@@ -95,4 +96,4 @@ function LoginApp() {
   );
 }
 
-ReactDOM.render(h(LoginApp), document.querySelector("#root"));
+createRoot(document.querySelector("#root")).render(h(LoginApp));
