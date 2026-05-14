@@ -5,6 +5,20 @@ function toExportQuantity(value) {
   return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
 }
 
+function formatExportDate(value) {
+  if (!value) {
+    return "";
+  }
+
+  const match = String(value).match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) {
+    return value;
+  }
+
+  const [, year, month, day] = match;
+  return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`;
+}
+
 function groupKey(entry) {
   return [entry.itemType || "-", entry.brand || "-", entry.model || "-", entry.item || "-"].join("|||");
 }
@@ -169,7 +183,7 @@ function buildPurchaseRows(entries) {
     ],
     ...entries.map((entry) => [
       entry.itemType || "",
-      entry.date || "",
+      formatExportDate(entry.date),
       entry.brand || "",
       entry.model || "",
       entry.item || "",
@@ -201,7 +215,7 @@ function buildIssueRows(entries) {
     ],
     ...entries.map((entry) => [
       entry.entity || "",
-      entry.date || "",
+      formatExportDate(entry.date),
       entry.itemType || "",
       entry.brand || "",
       entry.model || "",
@@ -210,7 +224,7 @@ function buildIssueRows(entries) {
       entry.fromBin || "",
       entry.issuedTo || "",
       entry.receivedBy || "",
-      entry.receivedDate || "",
+      formatExportDate(entry.receivedDate),
       entry.remarks || "",
     ]),
   ];

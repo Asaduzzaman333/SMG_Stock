@@ -81,6 +81,20 @@ function displayValue(value, fallback = "-") {
   return value || fallback;
 }
 
+function displayDate(value, fallback = "-") {
+  if (!value) {
+    return fallback;
+  }
+
+  const match = String(value).match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) {
+    return value;
+  }
+
+  const [, year, month, day] = match;
+  return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`;
+}
+
 function toPositiveQuantity(value) {
   const quantity = Number(value);
   return Number.isFinite(quantity) && quantity > 0 ? quantity : 0;
@@ -441,18 +455,19 @@ function PurchaseTable({ entries, isLoading, error, onEdit, onDelete }) {
   let rows = null;
 
   if (error) {
-    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 12 }, error));
+    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, error));
   } else if (isLoading) {
-    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 12 }, "Loading entries..."));
+    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, "Loading entries..."));
   } else if (entries.length === 0) {
-    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 12 }, "No purchase entry added yet."));
+    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, "No purchase entry added yet."));
   } else {
     rows = entries.map((entry, index) =>
       h(
         "tr",
         { key: entry.id || index },
+        h("td", null, index + 1),
         h("td", null, displayValue(entry.itemType)),
-        h("td", null, displayValue(entry.date, "")),
+        h("td", null, displayDate(entry.date, "")),
         h("td", null, displayValue(entry.brand)),
         h("td", null, displayValue(entry.model, "")),
         h("td", null, displayValue(entry.item)),
@@ -492,9 +507,21 @@ function PurchaseTable({ entries, isLoading, error, onEdit, onDelete }) {
           h(
             "tr",
             null,
-            ["Item Type", "Date", "Brand", "Model", "Item", "Rate", "Quantity", "Currency", "Supplier", "Storage Slot", "Remarks", "Actions"].map((heading) =>
-              h("th", { key: heading }, heading),
-            ),
+            [
+              "Serial Number",
+              "Item Type",
+              "Date",
+              "Brand",
+              "Model",
+              "Item",
+              "Rate",
+              "Quantity",
+              "Currency",
+              "Supplier",
+              "Storage Slot",
+              "Remarks",
+              "Actions",
+            ].map((heading) => h("th", { key: heading }, heading)),
           ),
         ),
         h("tbody", { id: "purchaseEntries" }, rows),
@@ -507,18 +534,19 @@ function IssueTable({ entries, isLoading, error, onEdit, onDelete }) {
   let rows = null;
 
   if (error) {
-    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, error));
+    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 14 }, error));
   } else if (isLoading) {
-    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, "Loading issue entries..."));
+    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 14 }, "Loading issue entries..."));
   } else if (entries.length === 0) {
-    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, "No issue entry added yet."));
+    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 14 }, "No issue entry added yet."));
   } else {
     rows = entries.map((entry, index) =>
       h(
         "tr",
         { key: entry.id || index },
+        h("td", null, index + 1),
         h("td", null, displayValue(entry.entity)),
-        h("td", null, displayValue(entry.date)),
+        h("td", null, displayDate(entry.date)),
         h("td", null, displayValue(entry.itemType)),
         h("td", null, displayValue(entry.brand)),
         h("td", null, displayValue(entry.model)),
@@ -527,7 +555,7 @@ function IssueTable({ entries, isLoading, error, onEdit, onDelete }) {
         h("td", null, displayValue(entry.fromBin)),
         h("td", null, displayValue(entry.issuedTo)),
         h("td", null, displayValue(entry.receivedBy)),
-        h("td", null, displayValue(entry.receivedDate)),
+        h("td", null, displayDate(entry.receivedDate)),
         h("td", null, displayValue(entry.remarks)),
         h(
           "td",
@@ -559,9 +587,22 @@ function IssueTable({ entries, isLoading, error, onEdit, onDelete }) {
           h(
             "tr",
             null,
-            ["Entity", "Date", "Item Type", "Brand", "Model", "Item", "Quantity", "From BIN", "Issued To", "Received By", "Received Date", "Remarks", "Actions"].map((heading) =>
-              h("th", { key: heading }, heading),
-            ),
+            [
+              "Serial Number",
+              "Entity",
+              "Date",
+              "Item Type",
+              "Brand",
+              "Model",
+              "Item",
+              "Quantity",
+              "From BIN",
+              "Issued To",
+              "Received By",
+              "Received Date",
+              "Remarks",
+              "Actions",
+            ].map((heading) => h("th", { key: heading }, heading)),
           ),
         ),
         h("tbody", { id: "issueEntries" }, rows),
