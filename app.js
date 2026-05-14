@@ -249,6 +249,10 @@ function SelectInput({ label, name, value, onChange, options, placeholder }) {
   );
 }
 
+function tableHeading(heading) {
+  return heading === "Serial Number" ? ["Serial", h("br", { key: "break" }), "Number"] : heading;
+}
+
 function PurchaseForm({
   form,
   isEditing,
@@ -537,7 +541,7 @@ function PurchaseTable({ entries, isLoading, error, onEdit, onDelete }) {
               "Storage Slot",
               "Remarks",
               "Actions",
-            ].map((heading) => h("th", { key: heading }, heading)),
+            ].map((heading) => h("th", { key: heading }, tableHeading(heading))),
           ),
         ),
         h("tbody", { id: "purchaseEntries" }, rows),
@@ -618,7 +622,7 @@ function IssueTable({ entries, isLoading, error, onEdit, onDelete }) {
               "Received Date",
               "Remarks",
               "Actions",
-            ].map((heading) => h("th", { key: heading }, heading)),
+            ].map((heading) => h("th", { key: heading }, tableHeading(heading))),
           ),
         ),
         h("tbody", { id: "issueEntries" }, rows),
