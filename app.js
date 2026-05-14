@@ -187,7 +187,7 @@ function DataList({ id, values }) {
   );
 }
 
-function TextInput({ label, name, value, onChange, type = "text", list, placeholder, required = true, ...rest }) {
+function TextInput({ label, name, value, onChange, type = "text", list, placeholder, required = false, ...rest }) {
   return h(
     "label",
     null,
@@ -221,14 +221,15 @@ function TextArea({ label, name, value, onChange, placeholder }) {
   );
 }
 
-function SelectInput({ label, name, value, onChange, options }) {
+function SelectInput({ label, name, value, onChange, options, placeholder }) {
   return h(
     "label",
     null,
     h("span", null, label),
     h(
       "select",
-      { name, required: true, value, onChange },
+      { name, required: false, value, onChange },
+      placeholder ? h("option", { value: "" }, placeholder) : null,
       options.map((option) => h("option", { key: option, value: option }, option)),
     ),
   );
@@ -275,7 +276,7 @@ function PurchaseForm({
           type: "text",
           list: "itemTypeOptions",
           placeholder: "Smoke Detection (FDS)",
-          required: true,
+          required: false,
           value: form.itemType,
           onChange,
         }),
@@ -287,12 +288,12 @@ function PurchaseForm({
       h(TextInput, { label: "Item", name: "item", placeholder: "Item name", value: form.item, onChange }),
       h(TextInput, { label: "Rate", name: "rate", type: "number", min: "0", step: "0.01", placeholder: "0.00", value: form.rate, onChange }),
       h(TextInput, { label: "Quantity", name: "quantity", type: "number", min: "0", step: "1", placeholder: "0", value: form.quantity, onChange }),
-      h(SelectInput, { label: "Currency", name: "currency", value: form.currency, onChange, options: ["BDT", "USD", "EUR", "CNY"] }),
+      h(SelectInput, { label: "Currency", name: "currency", value: form.currency, onChange, options: ["BDT", "USD", "EUR", "CNY"], placeholder: "Select One" }),
       h(
         "label",
         null,
         h("span", null, "Supplier"),
-        h("input", { name: "via", type: "text", list: "viaOptions", placeholder: "Select or type supplier", required: true, value: form.via, onChange }),
+        h("input", { name: "via", type: "text", list: "viaOptions", placeholder: "Select or type supplier", required: false, value: form.via, onChange }),
         h(DataList, { id: "viaOptions", values: ["Asian", "Direct", "MAMICO"] }),
       ),
       h(TextInput, { label: "Storage Slot", name: "storageSlot", placeholder: "Rack A3 / Box 12 / Floor 2", value: form.storageSlot, onChange }),
@@ -421,7 +422,6 @@ function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange
         placeholder: availableQuantity > 0 ? `Available ${availableQuantity}` : "0",
         value: form.quantity,
         onChange,
-        disabled: availableQuantity === 0,
       }),
       h(TextInput, { label: "Issued To", name: "issuedTo", placeholder: "Department, person, or site", value: form.issuedTo, onChange }),
       h(TextInput, { label: "Received By", name: "receivedBy", placeholder: "Receiver name", value: form.receivedBy, onChange }),
@@ -791,11 +791,14 @@ function App() {
       } else if (name === "fromBin") {
         const nextAvailableQuantity = getAvailableQuantityForIssue(availableStockRows, next);
         const currentQuantity = toPositiveQuantity(next.quantity);
+        const hasRequiredFields = next.itemType && next.brand && next.model && next.item;
 
-        if (nextAvailableQuantity <= 0) {
-          next.quantity = "";
-        } else if (currentQuantity > nextAvailableQuantity) {
-          next.quantity = String(nextAvailableQuantity);
+        if (hasRequiredFields) {
+          if (nextAvailableQuantity <= 0) {
+            next.quantity = "";
+          } else if (currentQuantity > nextAvailableQuantity) {
+            next.quantity = String(nextAvailableQuantity);
+          }
         }
       }
 
@@ -863,15 +866,17 @@ function App() {
     try {
       const requestedQuantity = toPositiveQuantity(issueForm.quantity);
 
-      if (availableIssueQuantity <= 0) {
-        throw new Error("No stock available for the selected issue item.");
-      }
-
       if (requestedQuantity <= 0) {
         throw new Error("Issue quantity must be greater than zero.");
       }
 
-      if (requestedQuantity > availableIssueQuantity) {
+      const hasRequiredFields = issueForm.itemType && issueForm.brand && issueForm.model && issueForm.item;
+      
+      if (hasRequiredFields && availableIssueQuantity <= 0) {
+        throw new Error("No stock available for the selected issue item.");
+      }
+
+      if (hasRequiredFields && requestedQuantity > availableIssueQuantity) {
         throw new Error(`Only ${availableIssueQuantity} item(s) available in stock.`);
       }
 
@@ -904,7 +909,7 @@ function App() {
       item: fieldValue(entry, "item"),
       rate: fieldValue(entry, "rate"),
       quantity: fieldValue(entry, "quantity", 1),
-      currency: fieldValue(entry, "currency", "BDT"),
+      currency: fieldValue(entry, "currency", ""),
       via: fieldValue(entry, "via"),
       storageSlot: fieldValue(entry, "storageSlot"),
       remarks: fieldValue(entry, "remarks"),
@@ -986,9 +991,9 @@ function App() {
       { className: "sidebar", "aria-label": "Main navigation" },
       h(
         "a",
-        { className: "brand", href: "#", "aria-label": "SMG Stock home" },
-        h("img", { className: "brand-logo", src: "/smg-logo-blue.png", alt: "SMG Stock logo" }),
-        h("span", null, h("strong", null, "SMG Stock")),
+        { className: "brand", href: "#", "aria-label": "SMG Equipment Stock home" },
+        h("img", { className: "brand-logo", src: "/smg-logo-blue.png", alt: "SMG Equipment Stock logo" }),
+        h("span", null, h("strong", null, "SMG Equipment Stock")),
       ),
       h(
         "nav",

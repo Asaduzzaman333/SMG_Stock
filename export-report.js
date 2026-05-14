@@ -416,7 +416,7 @@ export async function exportReport(preLoadedEntries, preLoadedIssues, exportType
     });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `${exportType.filename || `SMG_Stock_Summary_${new Date().toISOString().slice(0, 10)}`}.xlsx`;
+    link.download = `${exportType.filename || `SMG_Equipment_Stock_Summary_${new Date().toISOString().slice(0, 10)}`}.xlsx`;
     document.body.append(link);
     link.click();
     link.remove();
@@ -433,7 +433,7 @@ export async function exportReport(preLoadedEntries, preLoadedIssues, exportType
   const { type, filters } = exportConfig;
 
   let sheets = [];
-  let filename = `SMG_Stock_Report_${new Date().toISOString().slice(0, 10)}`;
+  let filename = `SMG_Equipment_Stock_Report_${new Date().toISOString().slice(0, 10)}`;
 
   if (type === "purchases" || type === "all") {
     sheets.push({
@@ -459,11 +459,11 @@ export async function exportReport(preLoadedEntries, preLoadedIssues, exportType
   }
 
   if (type === "purchases") {
-    filename = `SMG_Stock_Purchase_Summary_${new Date().toISOString().slice(0, 10)}`;
+    filename = `SMG_Equipment_Stock_Purchase_Summary_${new Date().toISOString().slice(0, 10)}`;
   } else if (type === "issues") {
-    filename = `SMG_Stock_Issue_Summary_${new Date().toISOString().slice(0, 10)}`;
+    filename = `SMG_Equipment_Stock_Issue_Summary_${new Date().toISOString().slice(0, 10)}`;
   } else if (type === "stock") {
-    filename = `SMG_Stock_Inventory_Summary_${new Date().toISOString().slice(0, 10)}`;
+    filename = `SMG_Equipment_Stock_Inventory_Summary_${new Date().toISOString().slice(0, 10)}`;
   }
 
   const workbook = createWorkbook(sheets);

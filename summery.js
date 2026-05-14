@@ -505,9 +505,9 @@ function SummeryApp() {
       { className: "sidebar", "aria-label": "Main navigation" },
       h(
         "a",
-        { className: "brand", href: "/", "aria-label": "SMG Stock home" },
-        h("img", { className: "brand-logo", src: "/smg-logo-blue.png", alt: "SMG Stock logo" }),
-        h("span", null, h("strong", null, "SMG Stock")),
+        { className: "brand", href: "/", "aria-label": "SMG Equipment Stock home" },
+        h("img", { className: "brand-logo", src: "/smg-logo-blue.png", alt: "SMG Equipment Stock logo" }),
+        h("span", null, h("strong", null, "SMG Equipment Stock")),
       ),
       h(
         "nav",

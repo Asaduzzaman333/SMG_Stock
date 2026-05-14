@@ -1,4 +1,4 @@
-# SMG Stock
+# SMG Equipment Stock
 
 Static React frontend with Vercel Node.js API functions and MongoDB.
 

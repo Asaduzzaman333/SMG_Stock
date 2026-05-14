@@ -55,8 +55,8 @@ function LoginApp() {
       h(
         "div",
         { className: "auth-brand" },
-        h("img", { className: "brand-logo", src: "/smg-logo-blue.png", alt: "SMG Stock logo" }),
-        h("div", null, h("strong", null, "SMG Stock"), h("p", null, "Secure inventory access")),
+        h("img", { className: "brand-logo", src: "/smg-logo-blue.png", alt: "SMG Equipment Stock logo" }),
+        h("div", null, h("strong", null, "SMG Equipment Stock"), h("p", null, "Secure inventory access")),
       ),
       h(
         "form",
