@@ -293,13 +293,13 @@ function PurchaseForm({
           ref: itemTypeRef,
           name: "itemType",
           type: "text",
-          list: "itemTypeOptions",
+          list: "purchaseItemTypeOptions",
           placeholder: "Smoke Detection (FDS)",
           required: false,
           value: form.itemType,
           onChange,
         }),
-        h(DataList, { id: "itemTypeOptions", values: ["Smoke Detection (FDS)", "Single Needle Machine spare"] }),
+        h(DataList, { id: "purchaseItemTypeOptions", values: options.itemTypes }),
       ),
       h(TextInput, { label: "Date", name: "date", type: "date", value: form.date, onChange }),
       h(TextInput, { label: "Brand", name: "brand", list: "purchaseBrandOptions", placeholder: "Brand name", value: form.brand, onChange }),
@@ -314,8 +314,8 @@ function PurchaseForm({
         "label",
         null,
         h("span", null, "Supplier"),
-        h("input", { name: "via", type: "text", list: "viaOptions", placeholder: "Select or type supplier", required: false, value: form.via, onChange }),
-        h(DataList, { id: "viaOptions", values: ["Asian", "Direct", "MAMICO"] }),
+        h("input", { name: "via", type: "text", list: "purchaseSupplierOptions", placeholder: "Select or type supplier", required: false, value: form.via, onChange }),
+        h(DataList, { id: "purchaseSupplierOptions", values: options.suppliers }),
       ),
       h(TextInput, { label: "Storage Slot", name: "storageSlot", placeholder: "Rack A3 / Box 12 / Floor 2", value: form.storageSlot, onChange }),
       h(
@@ -655,8 +655,10 @@ function App() {
   const editingIssueId = editingIssueIndex !== null ? issues[editingIssueIndex]?.id || null : null;
   const purchaseOptions = useMemo(
     () => ({
+      itemTypes: distinctValues(entries, "itemType"),
       brands: distinctValues(entries, "brand"),
       models: distinctValues(entries, "model"),
+      suppliers: distinctValues(entries, "via"),
       remarks: distinctValues(entries, "remarks"),
     }),
     [entries],
