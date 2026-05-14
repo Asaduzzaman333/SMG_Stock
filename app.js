@@ -25,7 +25,7 @@ const purchaseInitial = {
   item: "",
   rate: "",
   quantity: "",
-  currency: "BDT",
+  currency: "",
   via: "",
   storageSlot: "",
   remarks: "",
