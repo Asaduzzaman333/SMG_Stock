@@ -253,6 +253,7 @@ function PurchaseForm({
   form,
   isEditing,
   isSaving,
+  options,
   panelRef,
   status,
   show,
@@ -297,8 +298,10 @@ function PurchaseForm({
         h(DataList, { id: "itemTypeOptions", values: ["Smoke Detection (FDS)", "Single Needle Machine spare"] }),
       ),
       h(TextInput, { label: "Date", name: "date", type: "date", value: form.date, onChange }),
-      h(TextInput, { label: "Brand", name: "brand", placeholder: "Brand name", value: form.brand, onChange }),
-      h(TextInput, { label: "Model", name: "model", placeholder: "Product model or item name", value: form.model, onChange }),
+      h(TextInput, { label: "Brand", name: "brand", list: "purchaseBrandOptions", placeholder: "Brand name", value: form.brand, onChange }),
+      h(DataList, { id: "purchaseBrandOptions", values: options.brands }),
+      h(TextInput, { label: "Model", name: "model", list: "purchaseModelOptions", placeholder: "Product model or item name", value: form.model, onChange }),
+      h(DataList, { id: "purchaseModelOptions", values: options.models }),
       h(TextInput, { label: "Item", name: "item", placeholder: "Item name", value: form.item, onChange }),
       h(TextInput, { label: "Rate", name: "rate", type: "number", min: "0", step: "0.01", placeholder: "0.00", value: form.rate, onChange }),
       h(TextInput, { label: "Quantity", name: "quantity", type: "number", min: "0", step: "1", placeholder: "0", value: form.quantity, onChange }),
@@ -311,7 +314,20 @@ function PurchaseForm({
         h(DataList, { id: "viaOptions", values: ["Asian", "Direct", "MAMICO"] }),
       ),
       h(TextInput, { label: "Storage Slot", name: "storageSlot", placeholder: "Rack A3 / Box 12 / Floor 2", value: form.storageSlot, onChange }),
-      h(TextArea, { label: "Remarks", name: "remarks", placeholder: "Purchase notes, approval details, or delivery instruction", value: form.remarks, onChange }),
+      h(
+        "label",
+        { className: "wide-field" },
+        h("span", null, "Remarks"),
+        h("input", {
+          name: "remarks",
+          type: "text",
+          list: "purchaseRemarksOptions",
+          placeholder: "Purchase notes, approval details, or delivery instruction",
+          value: form.remarks,
+          onChange,
+        }),
+        h(DataList, { id: "purchaseRemarksOptions", values: options.remarks }),
+      ),
       h(
         "div",
         { className: "form-actions" },
@@ -633,6 +649,14 @@ function App() {
   const purchasePanelRef = useRef(null);
   const issuePanelRef = useRef(null);
   const editingIssueId = editingIssueIndex !== null ? issues[editingIssueIndex]?.id || null : null;
+  const purchaseOptions = useMemo(
+    () => ({
+      brands: distinctValues(entries, "brand"),
+      models: distinctValues(entries, "model"),
+      remarks: distinctValues(entries, "remarks"),
+    }),
+    [entries],
+  );
   const availableStockRows = useMemo(() => buildAvailableStock(entries, issues, editingIssueId), [entries, issues, editingIssueId]);
   const issueFilteredByType = useMemo(
     () => availableStockRows.filter((row) => valueMatchesSelection(row.itemType, issueForm.itemType)),
@@ -1067,6 +1091,7 @@ function App() {
           form: purchaseForm,
           isEditing: editingIndex !== null,
           isSaving: purchaseSaving,
+          options: purchaseOptions,
           panelRef: purchasePanelRef,
           status: purchaseStatus,
           show: showPurchaseForm,
