@@ -178,8 +178,12 @@ function recentDistinctValues(rows, field, limit = 5) {
   const values = [];
   const seen = new Set();
 
-  for (let index = rows.length - 1; index >= 0 && values.length < limit; index -= 1) {
-    const value = normalizeOptionValue(rows[index]?.[field]);
+  for (const row of rows) {
+    if (values.length >= limit) {
+      break;
+    }
+
+    const value = normalizeOptionValue(row?.[field]);
     const compareValue = normalizedCompareValue(value);
 
     if (!value || seen.has(compareValue)) {
