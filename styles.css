@@ -989,6 +989,12 @@ select {
   margin: 20px 0;
 }
 
+.page-bottom-actions {
+  display: flex;
+  justify-content: center;
+  margin: 28px 0 6px;
+}
+
 .search-box {
   display: grid;
   gap: 6px;

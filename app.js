@@ -1085,6 +1085,10 @@ function App() {
     }
   }
 
+  function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return h(
     "div",
     { className: "shell" },
@@ -1167,6 +1171,11 @@ function App() {
           onEdit: editIssue,
           onDelete: removeIssue,
         }),
+      ),
+      h(
+        "div",
+        { className: "page-bottom-actions" },
+        h("button", { className: "ghost-btn", type: "button", onClick: scrollToTop }, "Back to Top"),
       ),
     ),
   );
