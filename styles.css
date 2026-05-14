@@ -1082,6 +1082,10 @@ td {
   white-space: nowrap;
 }
 
+.entry-item-cell {
+  text-align: left;
+}
+
 th {
   color: var(--muted);
   font-size: 0.76rem;
