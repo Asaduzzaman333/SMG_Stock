@@ -174,6 +174,25 @@ function distinctValues(rows, field) {
   return [...new Set(rows.map((row) => row[field]).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
 
+function recentDistinctValues(rows, field, limit = 5) {
+  const values = [];
+  const seen = new Set();
+
+  for (let index = rows.length - 1; index >= 0 && values.length < limit; index -= 1) {
+    const value = normalizeOptionValue(rows[index]?.[field]);
+    const compareValue = normalizedCompareValue(value);
+
+    if (!value || seen.has(compareValue)) {
+      continue;
+    }
+
+    seen.add(compareValue);
+    values.push(value);
+  }
+
+  return values;
+}
+
 function getAvailableQuantityForIssue(rows, form) {
   if (!form.itemType || !form.brand || !form.model || !form.item) {
     return 0;
@@ -305,8 +324,7 @@ function PurchaseForm({
       h(TextInput, { label: "Date", name: "date", type: "date", value: form.date, onChange }),
       h(TextInput, { label: "Brand", name: "brand", list: "purchaseBrandOptions", placeholder: "Brand name", value: form.brand, onChange }),
       h(DataList, { id: "purchaseBrandOptions", values: options.brands }),
-      h(TextInput, { label: "Model", name: "model", list: "purchaseModelOptions", placeholder: "Product model or item name", value: form.model, onChange }),
-      h(DataList, { id: "purchaseModelOptions", values: options.models }),
+      h(TextInput, { label: "Model", name: "model", placeholder: "Product model or item name", value: form.model, onChange }),
       h(TextInput, { label: "Item", name: "item", placeholder: "Item name", value: form.item, onChange }),
       h(TextInput, { label: "Rate", name: "rate", type: "number", min: "0", step: "0.01", placeholder: "0.00", value: form.rate, onChange }),
       h(TextInput, { label: "Quantity", name: "quantity", type: "number", min: "0", step: "1", placeholder: "0", value: form.quantity, onChange }),
@@ -665,11 +683,10 @@ function App() {
   const editingIssueId = editingIssueIndex !== null ? issues[editingIssueIndex]?.id || null : null;
   const purchaseOptions = useMemo(
     () => ({
-      itemTypes: distinctValues(entries, "itemType"),
-      brands: distinctValues(entries, "brand"),
-      models: distinctValues(entries, "model"),
-      suppliers: distinctValues(entries, "via"),
-      remarks: distinctValues(entries, "remarks"),
+      itemTypes: recentDistinctValues(entries, "itemType"),
+      brands: recentDistinctValues(entries, "brand"),
+      suppliers: recentDistinctValues(entries, "via"),
+      remarks: recentDistinctValues(entries, "remarks"),
     }),
     [entries],
   );
