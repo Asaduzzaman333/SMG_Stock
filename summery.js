@@ -189,18 +189,18 @@ function ensureIssueGroup(groups, entry) {
 }
 
 function matchesFilters(entry, filters) {
-  const itemTypeMatch = filters.itemType === "all" || entry.itemType === filters.itemType;
-  const brandMatch = filters.brand === "all" || entry.brand === filters.brand;
-  const modelMatch = filters.model === "all" || entry.model === filters.model;
+  const itemTypeMatch = !filters.itemType || filters.itemType === "all" || entry.itemType === filters.itemType;
+  const brandMatch = !filters.brand || filters.brand === "all" || entry.brand === filters.brand;
+  const modelMatch = !filters.model || filters.model === "all" || entry.model === filters.model;
   const storageSlotMatch = !filters.storageSlot || filters.storageSlot === "all" || stockStorageSlot(entry) === filters.storageSlot;
   const remarksMatch = !filters.remarks || filters.remarks === "all" || stockRemarks(entry) === filters.remarks;
   return itemTypeMatch && brandMatch && modelMatch && storageSlotMatch && remarksMatch;
 }
 
 function matchesBaseFilters(entry, filters) {
-  const itemTypeMatch = filters.itemType === "all" || entry.itemType === filters.itemType;
-  const brandMatch = filters.brand === "all" || entry.brand === filters.brand;
-  const modelMatch = filters.model === "all" || entry.model === filters.model;
+  const itemTypeMatch = !filters.itemType || filters.itemType === "all" || entry.itemType === filters.itemType;
+  const brandMatch = !filters.brand || filters.brand === "all" || entry.brand === filters.brand;
+  const modelMatch = !filters.model || filters.model === "all" || entry.model === filters.model;
   return itemTypeMatch && brandMatch && modelMatch;
 }
 
@@ -585,21 +585,50 @@ function SummeryApp() {
   }, []);
 
   const allRows = useMemo(() => [...entries, ...issues], [entries, issues]);
-  const options = useMemo(
-    () => ({
-      itemType: uniqueValues(allRows, "itemType"),
-      brand: uniqueValues(allRows, "brand"),
-      model: uniqueValues(allRows, "model"),
-      storageSlot: uniqueStockValues(allRows, "storageSlot"),
-      remarks: uniqueStockValues(allRows, "remarks"),
-    }),
-    [allRows],
+  const itemTypeOptions = useMemo(() => uniqueValues(allRows, "itemType"), [allRows]);
+  const selectedItemType = itemTypeOptions.includes(filters.itemType) ? filters.itemType : "all";
+  const brandOptionRows = useMemo(
+    () => allRows.filter((entry) => matchesBaseFilters(entry, { itemType: selectedItemType })),
+    [allRows, selectedItemType],
   );
+  const brandOptions = useMemo(() => uniqueValues(brandOptionRows, "brand"), [brandOptionRows]);
+  const selectedBrand = brandOptions.includes(filters.brand) ? filters.brand : "all";
+  const modelOptionRows = useMemo(
+    () => allRows.filter((entry) => matchesBaseFilters(entry, { itemType: selectedItemType, brand: selectedBrand })),
+    [allRows, selectedItemType, selectedBrand],
+  );
+  const modelOptions = useMemo(() => uniqueValues(modelOptionRows, "model"), [modelOptionRows]);
+  const selectedModel = modelOptions.includes(filters.model) ? filters.model : "all";
+  const stockOptionRows = useMemo(
+    () =>
+      allRows.filter((entry) =>
+        matchesBaseFilters(entry, {
+          itemType: selectedItemType,
+          brand: selectedBrand,
+          model: selectedModel,
+        }),
+      ),
+    [allRows, selectedItemType, selectedBrand, selectedModel],
+  );
+  const storageSlotOptions = useMemo(() => uniqueStockValues(stockOptionRows, "storageSlot"), [stockOptionRows]);
+  const selectedStorageSlot = storageSlotOptions.includes(filters.storageSlot) ? filters.storageSlot : "all";
+  const remarksOptionRows = useMemo(
+    () => stockOptionRows.filter((entry) => matchesFilters(entry, { storageSlot: selectedStorageSlot })),
+    [stockOptionRows, selectedStorageSlot],
+  );
+  const remarksOptions = useMemo(() => uniqueStockValues(remarksOptionRows, "remarks"), [remarksOptionRows]);
+  const options = {
+    itemType: itemTypeOptions,
+    brand: brandOptions,
+    model: modelOptions,
+    storageSlot: storageSlotOptions,
+    remarks: remarksOptions,
+  };
   const effectiveFilters = {
-    itemType: options.itemType.includes(filters.itemType) ? filters.itemType : "all",
-    brand: options.brand.includes(filters.brand) ? filters.brand : "all",
-    model: options.model.includes(filters.model) ? filters.model : "all",
-    storageSlot: options.storageSlot.includes(filters.storageSlot) ? filters.storageSlot : "all",
+    itemType: selectedItemType,
+    brand: selectedBrand,
+    model: selectedModel,
+    storageSlot: selectedStorageSlot,
     remarks: options.remarks.includes(filters.remarks) ? filters.remarks : "all",
   };
   const baseEffectiveFilters = {
@@ -703,7 +732,15 @@ function SummeryApp() {
             allLabel: "Item Types",
             value: effectiveFilters.itemType,
             values: options.itemType,
-            onChange: (itemType) => setFilters((current) => ({ ...current, itemType })),
+            onChange: (itemType) =>
+              setFilters((current) => ({
+                ...current,
+                itemType,
+                brand: "all",
+                model: "all",
+                storageSlot: "all",
+                remarks: "all",
+              })),
           }),
           h(SelectFilter, {
             id: "brandFilter",
@@ -711,7 +748,14 @@ function SummeryApp() {
             allLabel: "Brands",
             value: effectiveFilters.brand,
             values: options.brand,
-            onChange: (brand) => setFilters((current) => ({ ...current, brand })),
+            onChange: (brand) =>
+              setFilters((current) => ({
+                ...current,
+                brand,
+                model: "all",
+                storageSlot: "all",
+                remarks: "all",
+              })),
           }),
           h(SelectFilter, {
             id: "modelFilter",
@@ -719,7 +763,13 @@ function SummeryApp() {
             allLabel: "Models",
             value: effectiveFilters.model,
             values: options.model,
-            onChange: (model) => setFilters((current) => ({ ...current, model })),
+            onChange: (model) =>
+              setFilters((current) => ({
+                ...current,
+                model,
+                storageSlot: "all",
+                remarks: "all",
+              })),
           }),
           activeView === "stock"
             ? h(SelectFilter, {
@@ -728,7 +778,7 @@ function SummeryApp() {
                 allLabel: "Storage Slots",
                 value: effectiveFilters.storageSlot,
                 values: options.storageSlot,
-                onChange: (storageSlot) => setFilters((current) => ({ ...current, storageSlot })),
+                onChange: (storageSlot) => setFilters((current) => ({ ...current, storageSlot, remarks: "all" })),
               })
             : null,
           activeView === "stock"

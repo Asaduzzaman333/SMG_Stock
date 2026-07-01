@@ -276,6 +276,62 @@ function tableHeading(heading) {
   return heading === "Serial Number" ? ["Serial", h("br", { key: "break" }), "Number"] : heading;
 }
 
+function normalizeSearchValue(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function rowMatchesSearch(values, searchTerm) {
+  const query = normalizeSearchValue(searchTerm);
+
+  if (!query) {
+    return true;
+  }
+
+  return values.some((value) => normalizeSearchValue(value).includes(query));
+}
+
+function purchaseEntryMatchesSearch(entry, searchTerm) {
+  return rowMatchesSearch(
+    [
+      entry.itemType,
+      entry.date,
+      displayDate(entry.date, ""),
+      entry.brand,
+      entry.model,
+      entry.item,
+      entry.rate,
+      entry.quantity,
+      entry.currency,
+      entry.via,
+      entry.storageSlot,
+      entry.remarks,
+    ],
+    searchTerm,
+  );
+}
+
+function issueEntryMatchesSearch(entry, searchTerm) {
+  return rowMatchesSearch(
+    [
+      entry.entity,
+      entry.date,
+      displayDate(entry.date),
+      entry.itemType,
+      entry.brand,
+      entry.model,
+      entry.item,
+      entry.quantity,
+      entry.fromBin,
+      entry.issuedTo,
+      entry.receivedBy,
+      entry.receivedDate,
+      displayDate(entry.receivedDate),
+      entry.remarks,
+    ],
+    searchTerm,
+  );
+}
+
 function PurchaseForm({
   form,
   isEditing,
@@ -503,8 +559,10 @@ function IssueForm({ form, isEditing, isSaving, panelRef, status, show, onChange
   );
 }
 
-function PurchaseTable({ entries, isLoading, error, onEdit, onDelete }) {
+function PurchaseTable({ entries, isLoading, error, searchTerm, onSearchChange, onEdit, onDelete }) {
   let rows = null;
+  const searchableEntries = entries.map((entry, index) => ({ entry, index }));
+  const filteredEntries = searchableEntries.filter(({ entry }) => purchaseEntryMatchesSearch(entry, searchTerm));
 
   if (error) {
     rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, error));
@@ -512,12 +570,14 @@ function PurchaseTable({ entries, isLoading, error, onEdit, onDelete }) {
     rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, "Loading entries..."));
   } else if (entries.length === 0) {
     rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, "No purchase entry added yet."));
+  } else if (filteredEntries.length === 0) {
+    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 13 }, "No matching purchase entries found."));
   } else {
-    rows = entries.map((entry, index) =>
+    rows = filteredEntries.map(({ entry, index }, displayIndex) =>
       h(
         "tr",
         { key: entry.id || index },
-        h("td", null, index + 1),
+        h("td", null, displayIndex + 1),
         h("td", null, displayValue(entry.itemType)),
         h("td", null, displayDate(entry.date, "")),
         h("td", null, displayValue(entry.brand)),
@@ -546,7 +606,22 @@ function PurchaseTable({ entries, isLoading, error, onEdit, onDelete }) {
   return h(
     "article",
     { className: "table-panel" },
-    h("div", { className: "panel-header" }, h("div", null, h("p", { className: "eyebrow" }, "Purchase Entries"))),
+    h(
+      "div",
+      { className: "panel-header" },
+      h("div", null, h("p", { className: "eyebrow" }, "Purchase Entries")),
+      h(
+        "label",
+        { className: "search-box" },
+        h("span", null, "Search"),
+        h("input", {
+          type: "search",
+          placeholder: "Search purchase entries",
+          value: searchTerm,
+          onChange: (event) => onSearchChange(event.target.value),
+        }),
+      ),
+    ),
     h(
       "div",
       { className: "table-wrap" },
@@ -582,8 +657,10 @@ function PurchaseTable({ entries, isLoading, error, onEdit, onDelete }) {
   );
 }
 
-function IssueTable({ entries, isLoading, error, onEdit, onDelete }) {
+function IssueTable({ entries, isLoading, error, searchTerm, onSearchChange, onEdit, onDelete }) {
   let rows = null;
+  const searchableEntries = entries.map((entry, index) => ({ entry, index }));
+  const filteredEntries = searchableEntries.filter(({ entry }) => issueEntryMatchesSearch(entry, searchTerm));
 
   if (error) {
     rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 14 }, error));
@@ -591,12 +668,14 @@ function IssueTable({ entries, isLoading, error, onEdit, onDelete }) {
     rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 14 }, "Loading issue entries..."));
   } else if (entries.length === 0) {
     rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 14 }, "No issue entry added yet."));
+  } else if (filteredEntries.length === 0) {
+    rows = h("tr", { className: "empty-row" }, h("td", { colSpan: 14 }, "No matching issue entries found."));
   } else {
-    rows = entries.map((entry, index) =>
+    rows = filteredEntries.map(({ entry, index }, displayIndex) =>
       h(
         "tr",
         { key: entry.id || index },
-        h("td", null, index + 1),
+        h("td", null, displayIndex + 1),
         h("td", null, displayValue(entry.entity)),
         h("td", null, displayDate(entry.date)),
         h("td", null, displayValue(entry.itemType)),
@@ -626,7 +705,22 @@ function IssueTable({ entries, isLoading, error, onEdit, onDelete }) {
   return h(
     "article",
     { className: "table-panel" },
-    h("div", { className: "panel-header" }, h("div", null, h("p", { className: "eyebrow" }, "Issue Register"))),
+    h(
+      "div",
+      { className: "panel-header" },
+      h("div", null, h("p", { className: "eyebrow" }, "Issue Register")),
+      h(
+        "label",
+        { className: "search-box" },
+        h("span", null, "Search"),
+        h("input", {
+          type: "search",
+          placeholder: "Search issue register",
+          value: searchTerm,
+          onChange: (event) => onSearchChange(event.target.value),
+        }),
+      ),
+    ),
     h(
       "div",
       { className: "table-wrap" },
@@ -680,6 +774,8 @@ function App() {
   const [issueError, setIssueError] = useState("");
   const [purchaseSaving, setPurchaseSaving] = useState(false);
   const [issueSaving, setIssueSaving] = useState(false);
+  const [purchaseSearch, setPurchaseSearch] = useState("");
+  const [issueSearch, setIssueSearch] = useState("");
   const [exporting, setExporting] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const purchasePanelRef = useRef(null);
@@ -1144,6 +1240,8 @@ function App() {
           entries,
           isLoading: purchaseLoading,
           error: purchaseError,
+          searchTerm: purchaseSearch,
+          onSearchChange: setPurchaseSearch,
           onEdit: editPurchase,
           onDelete: removePurchase,
         }),
@@ -1168,6 +1266,8 @@ function App() {
           entries: issues,
           isLoading: issueLoading,
           error: issueError,
+          searchTerm: issueSearch,
+          onSearchChange: setIssueSearch,
           onEdit: editIssue,
           onDelete: removeIssue,
         }),
