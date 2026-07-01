@@ -23,8 +23,20 @@ function groupKey(entry) {
   return [entry.itemType || "-", entry.brand || "-", entry.model || "-", entry.item || "-"].join("|||");
 }
 
+function stockStorageSlot(entry) {
+  return entry.storageSlot || entry.fromBin || "-";
+}
+
+function stockRemarks(entry) {
+  return entry.remarks || "-";
+}
+
+function stockGroupKey(entry) {
+  return [groupKey(entry), stockStorageSlot(entry), stockRemarks(entry)].join("|||");
+}
+
 function ensureGroup(groups, entry) {
-  const key = groupKey(entry);
+  const key = stockGroupKey(entry);
 
   if (!groups.has(key)) {
     groups.set(key, {
@@ -32,6 +44,8 @@ function ensureGroup(groups, entry) {
       brand: entry.brand || "-",
       model: entry.model || "-",
       item: entry.item || "-",
+      storageSlot: stockStorageSlot(entry),
+      remarks: stockRemarks(entry),
       total: 0,
       issued: 0,
     });
@@ -44,7 +58,9 @@ function matchesFilters(entry, filters = {}) {
   const itemTypeMatch = !filters.itemType || filters.itemType === "all" || entry.itemType === filters.itemType;
   const brandMatch = !filters.brand || filters.brand === "all" || entry.brand === filters.brand;
   const modelMatch = !filters.model || filters.model === "all" || entry.model === filters.model;
-  return itemTypeMatch && brandMatch && modelMatch;
+  const storageSlotMatch = !filters.storageSlot || filters.storageSlot === "all" || stockStorageSlot(entry) === filters.storageSlot;
+  const remarksMatch = !filters.remarks || filters.remarks === "all" || stockRemarks(entry) === filters.remarks;
+  return itemTypeMatch && brandMatch && modelMatch && storageSlotMatch && remarksMatch;
 }
 
 function buildStockSummarySheet(entries, issues, filters = {}) {
@@ -64,13 +80,25 @@ function buildStockSummarySheet(entries, issues, filters = {}) {
         a.itemType.localeCompare(b.itemType) ||
         a.brand.localeCompare(b.brand) ||
         a.model.localeCompare(b.model) ||
-        a.item.localeCompare(b.item),
+        a.item.localeCompare(b.item) ||
+        a.storageSlot.localeCompare(b.storageSlot) ||
+        a.remarks.localeCompare(b.remarks),
     )
-    .map((group) => [group.itemType, group.brand, group.model, group.item, group.total || "", group.issued || "", group.total - group.issued]);
+    .map((group) => [
+      group.itemType,
+      group.brand,
+      group.model,
+      group.item,
+      group.total || "",
+      group.issued || "",
+      group.total - group.issued,
+      group.storageSlot,
+      group.remarks,
+    ]);
 
   return {
     rows: [
-      ["Item Type", "Brand", "Model", "Item", "Purchases", "Issued", "Stock"],
+      ["Item Type", "Brand", "Model", "Item", "Purchases", "Issues", "Stock", "Storage Slot", "Remarks"],
       ...rows,
     ],
   };

@@ -62,17 +62,36 @@ function uniqueValues(rows, key) {
   return [...new Set(rows.map((entry) => entry[key]).filter(Boolean))].sort();
 }
 
+function uniqueStockValues(rows, key) {
+  const valueForKey = key === "storageSlot" ? stockStorageSlot : stockRemarks;
+  return [...new Set(rows.map(valueForKey).filter((value) => value && value !== "-"))].sort();
+}
+
 function baseKey(entry) {
   return [entry.itemType || "-", entry.brand || "-", entry.model || "-", entry.item || "-"].join("|||");
 }
 
-function sortBaseRows(rows) {
+function stockStorageSlot(entry) {
+  return entry.storageSlot || entry.fromBin || "-";
+}
+
+function stockRemarks(entry) {
+  return entry.remarks || "-";
+}
+
+function stockKey(entry) {
+  return [baseKey(entry), stockStorageSlot(entry), stockRemarks(entry)].join("|||");
+}
+
+function sortStockRows(rows) {
   return rows.sort(
     (a, b) =>
       a.itemType.localeCompare(b.itemType) ||
       a.brand.localeCompare(b.brand) ||
       a.model.localeCompare(b.model) ||
-      a.item.localeCompare(b.item),
+      a.item.localeCompare(b.item) ||
+      a.storageSlot.localeCompare(b.storageSlot) ||
+      a.remarks.localeCompare(b.remarks),
   );
 }
 
@@ -86,6 +105,25 @@ function ensurePurchaseGroup(groups, entry) {
       model: entry.model || "-",
       item: entry.item || "-",
       total: 0,
+    });
+  }
+
+  return groups.get(key);
+}
+
+function ensureStockGroup(groups, entry) {
+  const key = stockKey(entry);
+
+  if (!groups.has(key)) {
+    groups.set(key, {
+      itemType: entry.itemType || "-",
+      brand: entry.brand || "-",
+      model: entry.model || "-",
+      item: entry.item || "-",
+      storageSlot: stockStorageSlot(entry),
+      remarks: stockRemarks(entry),
+      total: 0,
+      issued: 0,
     });
   }
 
@@ -122,7 +160,9 @@ function matchesFilters(entry, filters) {
   const itemTypeMatch = filters.itemType === "all" || entry.itemType === filters.itemType;
   const brandMatch = filters.brand === "all" || entry.brand === filters.brand;
   const modelMatch = filters.model === "all" || entry.model === filters.model;
-  return itemTypeMatch && brandMatch && modelMatch;
+  const storageSlotMatch = !filters.storageSlot || filters.storageSlot === "all" || stockStorageSlot(entry) === filters.storageSlot;
+  const remarksMatch = !filters.remarks || filters.remarks === "all" || stockRemarks(entry) === filters.remarks;
+  return itemTypeMatch && brandMatch && modelMatch && storageSlotMatch && remarksMatch;
 }
 
 function buildPurchaseRows(entries, filters) {
@@ -179,16 +219,16 @@ function buildStockRows(entries, issues, filters) {
   const groups = new Map();
 
   entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
-    const group = ensurePurchaseGroup(groups, entry);
+    const group = ensureStockGroup(groups, entry);
     group.total += toQuantity(entry.quantity);
   });
 
   issues.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
-    const group = ensurePurchaseGroup(groups, entry);
-    group.issued = (group.issued || 0) + toQuantity(entry.quantity);
+    const group = ensureStockGroup(groups, entry);
+    group.issued += toQuantity(entry.quantity);
   });
 
-  return sortBaseRows([...groups.values()].map((group) => ({ issued: 0, ...group })));
+  return sortStockRows([...groups.values()]);
 }
 
 function SelectFilter({ id, label, allLabel, value, values, onChange }) {
@@ -242,7 +282,9 @@ function SummaryHead({ activeView }) {
     h(
       "tr",
       null,
-      ["Item Type", "Brand", "Model", "Item", "Purchases", "Issues", "Stock"].map((heading) => h("th", { key: heading }, heading)),
+      ["Item Type", "Brand", "Model", "Item", "Purchases", "Issues", "Stock", "Storage Slot", "Remarks"].map((heading) =>
+        h("th", { key: heading }, heading),
+      ),
     ),
   );
 }
@@ -303,7 +345,7 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
   }
 
   if (rows.length === 0) {
-    return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 7 }, "No stock data found.")));
+    return h("tbody", { id: "summaryRows" }, h("tr", { className: "empty-row" }, h("td", { colSpan: 9 }, "No stock data found.")));
   }
 
   return h(
@@ -314,7 +356,7 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
 
       return h(
         "tr",
-        { key: baseKey(row) },
+        { key: stockKey(row) },
         h("td", { className: "sticky-col item-type-cell" }, row.itemType),
         h("td", { className: "sticky-col brand-cell" }, row.brand),
         h("td", { className: "sticky-col model-cell" }, row.model),
@@ -322,6 +364,8 @@ function SummaryRows({ activeView, rows, loadError, isLoading }) {
         h("td", { className: "qty-cell" }, row.total || ""),
         h("td", { className: "qty-cell" }, row.issued || ""),
         h("td", { className: `stock-cell ${stock < 0 ? "negative" : ""}` }, stock),
+        h("td", null, row.storageSlot),
+        h("td", null, row.remarks),
       );
     }),
   );
@@ -343,8 +387,18 @@ function exportRowsForView(activeView, rows) {
   }
 
   return [
-    ["Item Type", "Brand", "Model", "Item", "Purchases", "Issues", "Stock"],
-    ...rows.map((row) => [row.itemType, row.brand, row.model, row.item, row.total || "", row.issued || "", row.total - row.issued]),
+    ["Item Type", "Brand", "Model", "Item", "Purchases", "Issues", "Stock", "Storage Slot", "Remarks"],
+    ...rows.map((row) => [
+      row.itemType,
+      row.brand,
+      row.model,
+      row.item,
+      row.total || "",
+      row.issued || "",
+      row.total - row.issued,
+      row.storageSlot,
+      row.remarks,
+    ]),
   ];
 }
 
@@ -352,7 +406,7 @@ function SummeryApp() {
   const [entries, setEntries] = useState([]);
   const [issues, setIssues] = useState([]);
   const [activeView, setActiveView] = useState("stock");
-  const [filters, setFilters] = useState({ itemType: "all", brand: "all", model: "all" });
+  const [filters, setFilters] = useState({ itemType: "all", brand: "all", model: "all", storageSlot: "all", remarks: "all" });
   const [purchaseLoaded, setPurchaseLoaded] = useState(false);
   const [issueLoaded, setIssueLoaded] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -449,6 +503,8 @@ function SummeryApp() {
       itemType: uniqueValues(allRows, "itemType"),
       brand: uniqueValues(allRows, "brand"),
       model: uniqueValues(allRows, "model"),
+      storageSlot: uniqueStockValues(allRows, "storageSlot"),
+      remarks: uniqueStockValues(allRows, "remarks"),
     }),
     [allRows],
   );
@@ -456,18 +512,34 @@ function SummeryApp() {
     itemType: options.itemType.includes(filters.itemType) ? filters.itemType : "all",
     brand: options.brand.includes(filters.brand) ? filters.brand : "all",
     model: options.model.includes(filters.model) ? filters.model : "all",
+    storageSlot: options.storageSlot.includes(filters.storageSlot) ? filters.storageSlot : "all",
+    remarks: options.remarks.includes(filters.remarks) ? filters.remarks : "all",
+  };
+  const baseEffectiveFilters = {
+    itemType: effectiveFilters.itemType,
+    brand: effectiveFilters.brand,
+    model: effectiveFilters.model,
   };
   const summaryRows = useMemo(() => {
     if (activeView === "purchases") {
-      return buildPurchaseRows(entries, effectiveFilters);
+      return buildPurchaseRows(entries, baseEffectiveFilters);
     }
 
     if (activeView === "issues") {
-      return buildIssueRows(issues, effectiveFilters);
+      return buildIssueRows(issues, baseEffectiveFilters);
     }
 
     return buildStockRows(entries, issues, effectiveFilters);
-  }, [activeView, entries, issues, effectiveFilters.itemType, effectiveFilters.brand, effectiveFilters.model]);
+  }, [
+    activeView,
+    entries,
+    issues,
+    effectiveFilters.itemType,
+    effectiveFilters.brand,
+    effectiveFilters.model,
+    effectiveFilters.storageSlot,
+    effectiveFilters.remarks,
+  ]);
   const isLoading = !purchaseLoaded || !issueLoaded;
 
   async function handleExport() {
@@ -562,6 +634,26 @@ function SummeryApp() {
             values: options.model,
             onChange: (model) => setFilters((current) => ({ ...current, model })),
           }),
+          activeView === "stock"
+            ? h(SelectFilter, {
+                id: "storageSlotFilter",
+                label: "Storage Slot",
+                allLabel: "Storage Slots",
+                value: effectiveFilters.storageSlot,
+                values: options.storageSlot,
+                onChange: (storageSlot) => setFilters((current) => ({ ...current, storageSlot })),
+              })
+            : null,
+          activeView === "stock"
+            ? h(SelectFilter, {
+                id: "remarksFilter",
+                label: "Remarks",
+                allLabel: "Remarks",
+                value: effectiveFilters.remarks,
+                values: options.remarks,
+                onChange: (remarks) => setFilters((current) => ({ ...current, remarks })),
+              })
+            : null,
         ),
         h(
           "article",
