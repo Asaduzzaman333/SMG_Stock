@@ -83,6 +83,10 @@ function stockKey(entry) {
   return [baseKey(entry), stockStorageSlot(entry), stockRemarks(entry)].join("|||");
 }
 
+function stockSlotKey(entry) {
+  return [baseKey(entry), stockStorageSlot(entry)].join("|||");
+}
+
 function sortStockRows(rows) {
   return rows.sort(
     (a, b) =>
@@ -93,6 +97,34 @@ function sortStockRows(rows) {
       a.storageSlot.localeCompare(b.storageSlot) ||
       a.remarks.localeCompare(b.remarks),
   );
+}
+
+function appendIndexedGroup(index, key, group) {
+  const indexedGroups = index.get(key);
+
+  if (indexedGroups) {
+    if (!indexedGroups.includes(group)) {
+      indexedGroups.push(group);
+    }
+    return;
+  }
+
+  index.set(key, [group]);
+}
+
+function indexStockGroup(indexes, group) {
+  appendIndexedGroup(indexes.byBase, baseKey(group), group);
+  appendIndexedGroup(indexes.bySlot, stockSlotKey(group), group);
+}
+
+function buildStockIndexes(groups) {
+  const indexes = {
+    byBase: new Map(),
+    bySlot: new Map(),
+  };
+
+  groups.forEach((group) => indexStockGroup(indexes, group));
+  return indexes;
 }
 
 function ensurePurchaseGroup(groups, entry) {
@@ -165,10 +197,64 @@ function matchesFilters(entry, filters) {
   return itemTypeMatch && brandMatch && modelMatch && storageSlotMatch && remarksMatch;
 }
 
+function matchesBaseFilters(entry, filters) {
+  const itemTypeMatch = filters.itemType === "all" || entry.itemType === filters.itemType;
+  const brandMatch = filters.brand === "all" || entry.brand === filters.brand;
+  const modelMatch = filters.model === "all" || entry.model === filters.model;
+  return itemTypeMatch && brandMatch && modelMatch;
+}
+
+function stockIssueCandidates(groups, indexes, entry) {
+  const exactGroup = groups.get(stockKey(entry));
+  const candidates = [];
+
+  if (exactGroup) {
+    candidates.push(exactGroup);
+  }
+
+  (indexes.bySlot.get(stockSlotKey(entry)) || []).forEach((group) => {
+    if (group !== exactGroup) {
+      candidates.push(group);
+    }
+  });
+
+  if (candidates.length > 0) {
+    return candidates;
+  }
+
+  return indexes.byBase.get(baseKey(entry)) || [];
+}
+
+function applyIssueToStockGroups(groups, indexes, entry) {
+  let remainingQuantity = toQuantity(entry.quantity);
+  let candidates = stockIssueCandidates(groups, indexes, entry);
+
+  if (candidates.length === 0) {
+    const group = ensureStockGroup(groups, entry);
+    indexStockGroup(indexes, group);
+    candidates = [group];
+  }
+
+  candidates.forEach((group) => {
+    if (remainingQuantity <= 0) {
+      return;
+    }
+
+    const availableQuantity = Math.max(0, group.total - group.issued);
+    const issuedQuantity = Math.min(availableQuantity, remainingQuantity);
+    group.issued += issuedQuantity;
+    remainingQuantity -= issuedQuantity;
+  });
+
+  if (remainingQuantity > 0) {
+    candidates[0].issued += remainingQuantity;
+  }
+}
+
 function buildPurchaseRows(entries, filters) {
   const groups = new Map();
 
-  entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
+  entries.filter((entry) => matchesBaseFilters(entry, filters)).forEach((entry) => {
     const key = [baseKey(entry), entry.via || "-"].join("|||");
 
     if (!groups.has(key)) {
@@ -198,7 +284,7 @@ function buildPurchaseRows(entries, filters) {
 function buildIssueRows(issues, filters) {
   const groups = new Map();
 
-  issues.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
+  issues.filter((entry) => matchesBaseFilters(entry, filters)).forEach((entry) => {
     ensureIssueGroup(groups, entry).issued += toQuantity(entry.quantity);
   });
 
@@ -218,17 +304,18 @@ function buildIssueRows(issues, filters) {
 function buildStockRows(entries, issues, filters) {
   const groups = new Map();
 
-  entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
+  entries.filter((entry) => matchesBaseFilters(entry, filters)).forEach((entry) => {
     const group = ensureStockGroup(groups, entry);
     group.total += toQuantity(entry.quantity);
   });
 
-  issues.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
-    const group = ensureStockGroup(groups, entry);
-    group.issued += toQuantity(entry.quantity);
+  const indexes = buildStockIndexes(groups);
+
+  issues.filter((entry) => matchesBaseFilters(entry, filters)).forEach((entry) => {
+    applyIssueToStockGroups(groups, indexes, entry);
   });
 
-  return sortStockRows([...groups.values()]);
+  return sortStockRows([...groups.values()].filter((group) => matchesFilters(group, filters)));
 }
 
 function SelectFilter({ id, label, allLabel, value, values, onChange }) {

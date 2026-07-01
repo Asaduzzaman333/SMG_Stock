@@ -35,6 +35,10 @@ function stockGroupKey(entry) {
   return [groupKey(entry), stockStorageSlot(entry), stockRemarks(entry)].join("|||");
 }
 
+function stockSlotKey(entry) {
+  return [groupKey(entry), stockStorageSlot(entry)].join("|||");
+}
+
 function ensureGroup(groups, entry) {
   const key = stockGroupKey(entry);
 
@@ -54,27 +58,109 @@ function ensureGroup(groups, entry) {
   return groups.get(key);
 }
 
-function matchesFilters(entry, filters = {}) {
+function appendIndexedGroup(index, key, group) {
+  const indexedGroups = index.get(key);
+
+  if (indexedGroups) {
+    if (!indexedGroups.includes(group)) {
+      indexedGroups.push(group);
+    }
+    return;
+  }
+
+  index.set(key, [group]);
+}
+
+function indexStockGroup(indexes, group) {
+  appendIndexedGroup(indexes.byBase, groupKey(group), group);
+  appendIndexedGroup(indexes.bySlot, stockSlotKey(group), group);
+}
+
+function buildStockIndexes(groups) {
+  const indexes = {
+    byBase: new Map(),
+    bySlot: new Map(),
+  };
+
+  groups.forEach((group) => indexStockGroup(indexes, group));
+  return indexes;
+}
+
+function matchesBaseFilters(entry, filters = {}) {
   const itemTypeMatch = !filters.itemType || filters.itemType === "all" || entry.itemType === filters.itemType;
   const brandMatch = !filters.brand || filters.brand === "all" || entry.brand === filters.brand;
   const modelMatch = !filters.model || filters.model === "all" || entry.model === filters.model;
+  return itemTypeMatch && brandMatch && modelMatch;
+}
+
+function matchesFilters(entry, filters = {}) {
   const storageSlotMatch = !filters.storageSlot || filters.storageSlot === "all" || stockStorageSlot(entry) === filters.storageSlot;
   const remarksMatch = !filters.remarks || filters.remarks === "all" || stockRemarks(entry) === filters.remarks;
-  return itemTypeMatch && brandMatch && modelMatch && storageSlotMatch && remarksMatch;
+  return matchesBaseFilters(entry, filters) && storageSlotMatch && remarksMatch;
+}
+
+function stockIssueCandidates(groups, indexes, entry) {
+  const exactGroup = groups.get(stockGroupKey(entry));
+  const candidates = [];
+
+  if (exactGroup) {
+    candidates.push(exactGroup);
+  }
+
+  (indexes.bySlot.get(stockSlotKey(entry)) || []).forEach((group) => {
+    if (group !== exactGroup) {
+      candidates.push(group);
+    }
+  });
+
+  if (candidates.length > 0) {
+    return candidates;
+  }
+
+  return indexes.byBase.get(groupKey(entry)) || [];
+}
+
+function applyIssueToStockGroups(groups, indexes, entry) {
+  let remainingQuantity = toExportQuantity(entry.quantity);
+  let candidates = stockIssueCandidates(groups, indexes, entry);
+
+  if (candidates.length === 0) {
+    const group = ensureGroup(groups, entry);
+    indexStockGroup(indexes, group);
+    candidates = [group];
+  }
+
+  candidates.forEach((group) => {
+    if (remainingQuantity <= 0) {
+      return;
+    }
+
+    const availableQuantity = Math.max(0, group.total - group.issued);
+    const issuedQuantity = Math.min(availableQuantity, remainingQuantity);
+    group.issued += issuedQuantity;
+    remainingQuantity -= issuedQuantity;
+  });
+
+  if (remainingQuantity > 0) {
+    candidates[0].issued += remainingQuantity;
+  }
 }
 
 function buildStockSummarySheet(entries, issues, filters = {}) {
   const groups = new Map();
 
-  entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
+  entries.filter((entry) => matchesBaseFilters(entry, filters)).forEach((entry) => {
     ensureGroup(groups, entry).total += toExportQuantity(entry.quantity);
   });
 
-  issues.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
-    ensureGroup(groups, entry).issued += toExportQuantity(entry.quantity);
+  const indexes = buildStockIndexes(groups);
+
+  issues.filter((entry) => matchesBaseFilters(entry, filters)).forEach((entry) => {
+    applyIssueToStockGroups(groups, indexes, entry);
   });
 
   const rows = [...groups.values()]
+    .filter((group) => matchesFilters(group, filters))
     .sort(
       (a, b) =>
         a.itemType.localeCompare(b.itemType) ||
@@ -107,7 +193,7 @@ function buildStockSummarySheet(entries, issues, filters = {}) {
 function buildPurchaseSummarySheet(entries, filters = {}) {
   const groups = new Map();
 
-  entries.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
+  entries.filter((entry) => matchesBaseFilters(entry, filters)).forEach((entry) => {
     const key = [groupKey(entry), entry.via || "-"].join("|||");
 
     if (!groups.has(key)) {
@@ -146,7 +232,7 @@ function buildPurchaseSummarySheet(entries, filters = {}) {
 function buildIssueSummarySheet(issues, filters = {}) {
   const groups = new Map();
 
-  issues.filter((entry) => matchesFilters(entry, filters)).forEach((entry) => {
+  issues.filter((entry) => matchesBaseFilters(entry, filters)).forEach((entry) => {
     const key = [
       groupKey(entry),
       entry.entity || "-",
